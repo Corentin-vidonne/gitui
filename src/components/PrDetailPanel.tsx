@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { X, Sparkles, ExternalLink, GitPullRequest } from "lucide-react";
+import { X, Sparkles, ExternalLink, GitPullRequest, ShieldCheck, Loader2 } from "lucide-react";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import type { PrDetail } from "../lib/types";
+import type { PrDetail, PrReview } from "../lib/types";
 import { api, errorText } from "../lib/api";
+import { useTheme } from "../lib/theme";
 import { DiffView, splitDiffByFile } from "./DiffView";
 import { CommentList } from "./CommentList";
 
@@ -16,6 +17,12 @@ function ciColor(c: string): string {
   if (c === "FAILURE") return "text-red-400";
   return "text-amber-400";
 }
+/** Badge classes for an AI-review finding severity. */
+function sevBadge(sev: string): string {
+  if (sev === "critical") return "border-red-700 bg-red-950/50 text-red-300";
+  if (sev === "warning") return "border-amber-700 bg-amber-950/50 text-amber-300";
+  return "border-neutral-700 bg-neutral-800 text-neutral-300";
+}
 
 export function PrDetailPanel({
   repoPath,
@@ -28,15 +35,22 @@ export function PrDetailPanel({
   onClose: () => void;
   onAnalyze: (number: number, mode: string) => void;
 }) {
+  const { isModern } = useTheme();
   const [pr, setPr] = useState<PrDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  const [review, setReview] = useState<PrReview | null>(null);
+  const [reviewing, setReviewing] = useState(false);
+  const [reviewError, setReviewError] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
     setPr(null);
     setError(null);
     setSelectedFile(null);
+    setReview(null);
+    setReviewError(null);
+    setReviewing(false);
     api
       .prDetail(repoPath, number)
       .then((d) => alive && setPr(d))
@@ -46,6 +60,19 @@ export function PrDetailPanel({
     };
   }, [repoPath, number]);
 
+  async function runReview() {
+    setReviewing(true);
+    setReview(null);
+    setReviewError(null);
+    try {
+      setReview(await api.reviewPr(repoPath, number));
+    } catch (e) {
+      setReviewError(errorText(e));
+    } finally {
+      setReviewing(false);
+    }
+  }
+
   const fileChunks = useMemo(() => splitDiffByFile(pr?.diff ?? ""), [pr]);
   const shownDiff = selectedFile
     ? fileChunks[selectedFile] ?? "(no diff for this file)"
@@ -53,7 +80,11 @@ export function PrDetailPanel({
 
   return (
     <aside className="flex h-full w-full flex-col border-l border-neutral-800 bg-neutral-900/40">
-      <div className="flex h-14 items-center gap-2 border-b border-neutral-800 px-4">
+      <div
+        className={`flex items-center gap-2 border-b border-neutral-800 px-4 ${
+          isModern ? "h-16" : "h-14"
+        }`}
+      >
         <GitPullRequest className="h-4 w-4 text-indigo-400" />
         <span className="font-mono text-sm text-neutral-100">#{number}</span>
         {pr && <span className={`text-xs ${stateColor(pr.state)}`}>{pr.state}</span>}
@@ -93,12 +124,90 @@ export function PrDetailPanel({
                 <Sparkles className="h-3.5 w-3.5" /> Detailed
               </button>
               <button
+                onClick={runReview}
+                disabled={reviewing}
+                title="Structured AI review (findings shown below)"
+                className="inline-flex items-center gap-1.5 rounded-md border border-indigo-600 px-2.5 py-1.5 text-xs font-medium text-indigo-300 hover:bg-indigo-950/40 disabled:opacity-50"
+              >
+                {reviewing ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                )}{" "}
+                AI Review
+              </button>
+              <button
                 onClick={() => openUrl(pr.url)}
                 className="inline-flex items-center gap-1.5 rounded-md border border-neutral-700 px-2.5 py-1.5 text-xs text-neutral-300 hover:bg-neutral-800"
               >
                 <ExternalLink className="h-3.5 w-3.5" /> Open
               </button>
             </div>
+
+            {(reviewing || reviewError || review) && (
+              <div>
+                <h4 className="mb-1 flex items-center gap-1.5 text-xs uppercase tracking-wider text-neutral-500">
+                  <ShieldCheck className="h-3.5 w-3.5" /> AI Review
+                  {review && (
+                    <span className="text-neutral-600">({review.findings.length})</span>
+                  )}
+                </h4>
+                {reviewing && (
+                  <div className="flex items-center gap-2 rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-xs text-neutral-400">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" /> Reviewing… (~30 s)
+                  </div>
+                )}
+                {reviewError && (
+                  <div className="rounded-md border border-red-900 bg-red-950/40 px-3 py-2 text-xs text-red-300">
+                    {reviewError}
+                  </div>
+                )}
+                {review && !reviewing && (
+                  <div className="space-y-2">
+                    {review.summary.trim() && (
+                      <p className="whitespace-pre-wrap rounded-md border border-neutral-800 bg-neutral-950/60 p-2 text-xs text-neutral-300">
+                        {review.summary}
+                      </p>
+                    )}
+                    {review.findings.length === 0 ? (
+                      <p className="text-xs text-neutral-500">No issues found ✓</p>
+                    ) : (
+                      <ul className="space-y-1">
+                        {review.findings.map((f, i) => (
+                          <li key={i}>
+                            <button
+                              onClick={() => setSelectedFile(f.file)}
+                              title="Show this file's changes"
+                              className="w-full rounded-md border border-neutral-800 bg-neutral-950/40 p-2 text-left hover:border-neutral-700 hover:bg-neutral-900"
+                            >
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className={`shrink-0 rounded border px-1.5 text-[10px] font-semibold uppercase ${sevBadge(
+                                    f.severity
+                                  )}`}
+                                >
+                                  {f.severity}
+                                </span>
+                                <span className="truncate font-mono text-[11px] text-neutral-400">
+                                  {f.file}
+                                  {f.line != null ? `:${f.line}` : ""}
+                                </span>
+                              </div>
+                              <div className="mt-1 text-xs font-medium text-neutral-200">
+                                {f.title}
+                              </div>
+                              <div className="mt-0.5 whitespace-pre-wrap text-xs text-neutral-400">
+                                {f.detail}
+                              </div>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="space-y-1 text-xs text-neutral-400">
               <div>

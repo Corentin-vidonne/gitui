@@ -1,4 +1,4 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 /// A GitHub pull request associated with a branch.
 #[derive(Serialize, Clone, Debug)]
@@ -229,4 +229,46 @@ pub struct SubmitStepInfo {
     pub pr: Option<u64>,
     /// Suggested PR title for branches that will be created.
     pub default_title: String,
+}
+
+/// A single structured finding from an AI PR review.
+/// Also `Deserialize` so we can parse `claude`'s JSON output directly. Fields use
+/// `default` + `alias` because LLM output drifts (e.g. `path`/`message`); a partial
+/// finding should never break the whole review.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct PrFinding {
+    #[serde(default, alias = "path")]
+    pub file: String,
+    /// 1-based line in the file, when the model can pin it; otherwise null.
+    #[serde(default)]
+    pub line: Option<u32>,
+    /// info | warning | critical
+    #[serde(default, alias = "level")]
+    pub severity: String,
+    #[serde(default, alias = "message")]
+    pub title: String,
+    #[serde(default, alias = "description", alias = "body")]
+    pub detail: String,
+}
+
+/// The result of an AI PR review: a short summary plus structured findings.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct PrReview {
+    #[serde(default)]
+    pub summary: String,
+    /// The model sometimes labels this array `issues`/`problems` — accept those too.
+    #[serde(default, alias = "issues", alias = "problems")]
+    pub findings: Vec<PrFinding>,
+}
+
+/// An AI-suggested resolution for one conflicted file.
+#[derive(Serialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct ConflictSuggestion {
+    pub file: String,
+    pub explanation: String,
+    /// Full resolved file content, ready to write back.
+    pub resolution: String,
 }

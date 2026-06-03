@@ -145,6 +145,31 @@ export type PrDetail = {
   reviews: Review[];
 };
 
+/** One structured finding from an AI PR review. */
+export type PrFinding = {
+  file: string;
+  /** 1-based line, when the model can pin it. */
+  line: number | null;
+  /** info | warning | critical */
+  severity: string;
+  title: string;
+  detail: string;
+};
+
+/** Result of an AI PR review: a short summary plus structured findings. */
+export type PrReview = {
+  summary: string;
+  findings: PrFinding[];
+};
+
+/** AI-suggested resolution for one conflicted file. */
+export type ConflictSuggestion = {
+  file: string;
+  explanation: string;
+  /** Full resolved file content, ready to write back. */
+  resolution: string;
+};
+
 export type IssueSummary = {
   number: number;
   title: string;

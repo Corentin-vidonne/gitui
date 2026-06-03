@@ -6,6 +6,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { Sparkles, X } from "lucide-react";
 import { errorText } from "../lib/api";
+import { useThemePalette } from "../lib/theme";
 
 export type AnalyzeTarget =
   | { kind: "commit"; sha: string }
@@ -36,17 +37,42 @@ export function TerminalDock({
   onClose: () => void;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
+  const termRef = useRef<Terminal | null>(null);
   const [height, setHeight] = useState(360);
   const targetKey = target.kind === "commit" ? target.sha : `pr-${target.number}`;
 
+  // Theme-aware terminal colors. Read via a ref inside the (session-creating)
+  // effect so switching theme updates the live terminal without recreating it.
+  const palette = useThemePalette();
+  const paletteRef = useRef(palette);
+  paletteRef.current = palette;
+
+  useEffect(() => {
+    if (termRef.current) {
+      termRef.current.options.theme = {
+        background: palette.termBg,
+        foreground: palette.termFg,
+        cursor: palette.termCursor,
+        selectionBackground: palette.termSelection,
+      };
+    }
+  }, [palette]);
+
   useEffect(() => {
     const id = newId();
+    const p = paletteRef.current;
     const term = new Terminal({
       fontSize: 12,
       fontFamily: 'ui-monospace, "Cascadia Code", Consolas, monospace',
-      theme: { background: "#0a0a0a", foreground: "#e5e5e5" },
+      theme: {
+        background: p.termBg,
+        foreground: p.termFg,
+        cursor: p.termCursor,
+        selectionBackground: p.termSelection,
+      },
       cursorBlink: true,
     });
+    termRef.current = term;
     const fit = new FitAddon();
     term.loadAddon(fit);
     if (hostRef.current) term.open(hostRef.current);
@@ -104,6 +130,7 @@ export function TerminalDock({
       unlisteners.forEach((u) => u());
       invoke("term_close", { id }).catch(() => {});
       term.dispose();
+      termRef.current = null;
     };
   }, [repoPath, targetKey, mode]);
 

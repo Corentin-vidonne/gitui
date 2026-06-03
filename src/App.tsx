@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type MouseEvent as ReactMouseEvent,
@@ -9,6 +10,7 @@ import {
 import {
   RefreshCw,
   FolderPlus,
+  FolderTree,
   GitBranch,
   Plus,
   Layers,
@@ -22,6 +24,7 @@ import {
   Bell,
   Code2,
   FileText,
+  Settings as SettingsIcon,
 } from "lucide-react";
 import { api, errorText } from "./lib/api";
 import { notify as sendDesktopNotification } from "./lib/notify";
@@ -52,6 +55,27 @@ import { IssueDetailPanel } from "./components/IssueDetailPanel";
 import { PrList } from "./components/PrList";
 import { DocsView } from "./components/DocsView";
 import { AddRepoDialog } from "./components/AddRepoDialog";
+import { Sidebar } from "./components/Sidebar";
+import { GroupNameDialog } from "./components/GroupNameDialog";
+import { WorkspaceGroupFilter } from "./components/WorkspaceGroupFilter";
+import { SettingsModal } from "./components/SettingsModal";
+import { Spinner } from "./components/Spinner";
+import { loadSettings, saveSettings, type Settings } from "./lib/settings";
+import { useTheme } from "./lib/theme";
+import {
+  loadGroups,
+  saveGroups,
+  buildSections,
+  createGroup,
+  renameGroup,
+  deleteGroup,
+  assignRepo,
+  toggleCollapsed,
+  forgetRepo,
+  pruneAssignments,
+  UNGROUPED,
+  type RepoGroupsState,
+} from "./lib/groups";
 
 const REPOS_KEY = "gitui.repos";
 
@@ -111,13 +135,67 @@ export default function App() {
   const [inspectIssue, setInspectIssue] = useState<number | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [updates, setUpdates] = useState<Record<string, UpdateItem[]>>({});
+  const [groupState, setGroupState] = useState<RepoGroupsState>(loadGroups);
+  const [groupSyncBusy, setGroupSyncBusy] = useState<Record<string, boolean>>({});
+  const [workspaceGroup, setWorkspaceGroup] = useState<string | null>(null);
+  const [groupDialog, setGroupDialog] = useState<
+    | { mode: "new" }
+    | { mode: "rename"; id: string }
+    | { mode: "assign"; path: string }
+    | null
+  >(null);
+  const [settings, setSettings] = useState<Settings>(loadSettings);
+  const [showSettings, setShowSettings] = useState(false);
+  const { isModern } = useTheme();
   const notifiedKeys = useRef<Set<string>>(new Set());
   const totalUpdates = Object.values(updates).reduce((n, a) => n + a.length, 0);
+
+  // True while a *different* repo's view is loading (first open or switch), but
+  // not for in-place mutations/refreshes of the already-shown repo — those keep
+  // the current view with the inline spinning refresh icon. `loading` going back
+  // to false dismisses this even in the (impossible) path-mismatch case.
+  const switchingRepo =
+    !!selected && loading && (!view || view.repoRoot !== selected);
 
   function notify(msg: string) {
     setToast(msg);
     window.setTimeout(() => setToast(null), 3000);
   }
+
+  // Apply a pure reducer to the group state and persist the result.
+  const mutateGroups = useCallback(
+    (fn: (s: RepoGroupsState) => RepoGroupsState) =>
+      setGroupState((prev) => {
+        const next = fn(prev);
+        saveGroups(next);
+        return next;
+      }),
+    []
+  );
+
+  function createGroupAndAssign(path: string, name: string) {
+    mutateGroups((s) => {
+      const { state, id } = createGroup(s, name);
+      return assignRepo(state, path, id);
+    });
+  }
+
+  const sections = useMemo(
+    () => buildSections(groupState, repos),
+    [groupState, repos]
+  );
+
+  // Repos shown in the Workspace graph, filtered by the active group.
+  const workspaceRepos = useMemo(() => {
+    if (!workspaceGroup) return repos;
+    if (workspaceGroup === UNGROUPED)
+      return repos.filter(
+        (p) =>
+          !groupState.assignments[p] ||
+          !groupState.groups.some((g) => g.id === groupState.assignments[p])
+      );
+    return repos.filter((p) => groupState.assignments[p] === workspaceGroup);
+  }, [repos, workspaceGroup, groupState]);
 
   function registerRepo(v: RepoView) {
     setRepos((prev) => {
@@ -149,6 +227,12 @@ export default function App() {
 
   useEffect(() => {
     api.health().then(setHealth).catch(() => {});
+  }, []);
+
+  // One-time cleanup: drop group assignments for repos that no longer exist.
+  useEffect(() => {
+    mutateGroups((s) => pruneAssignments(s, repos));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const refresh = useCallback(async (path: string | null) => {
@@ -212,6 +296,7 @@ export default function App() {
       if (selected === path) setSelected(next[0] ?? null);
       return next;
     });
+    mutateGroups((s) => forgetRepo(s, path));
   }
 
   // Poll every added repo for new activity; fire a desktop notification once per
@@ -231,6 +316,7 @@ export default function App() {
     for (const [p, items] of entries) if (items.length) map[p] = items;
     setUpdates(map);
 
+    if (!settings.notifications) return;
     for (const [p, items] of entries) {
       const fresh = items.filter((it) => !notifiedKeys.current.has(`${p}::${it.key}`));
       fresh.forEach((it) => notifiedKeys.current.add(`${p}::${it.key}`));
@@ -242,14 +328,14 @@ export default function App() {
         await sendDesktopNotification(name, `${fresh.length} new updates`);
       }
     }
-  }, [repos]);
+  }, [repos, settings.notifications]);
 
   useEffect(() => {
     if (repos.length === 0) return;
     checkAllUpdates();
-    const id = window.setInterval(checkAllUpdates, 180_000); // every 3 min
+    const id = window.setInterval(checkAllUpdates, settings.pollIntervalMs);
     return () => window.clearInterval(id);
-  }, [checkAllUpdates]);
+  }, [checkAllUpdates, settings.pollIntervalMs]);
 
   // Open a repo and clear its update indicator (records current state as seen).
   const openRepo = useCallback((p: string) => {
@@ -262,6 +348,35 @@ export default function App() {
     });
     api.markUpdatesSeen(p).catch(() => {});
   }, []);
+
+  // Sync every repo in a group sequentially. Per-repo errors are counted, not
+  // fatal, so one bad repo doesn't abort the rest. Refresh the on-screen view
+  // only if the selected repo was part of the group.
+  const syncGroup = useCallback(
+    async (groupId: string) => {
+      const section = sections.find((s) => (s.group?.id ?? UNGROUPED) === groupId);
+      if (!section || section.repos.length === 0) return;
+      setGroupSyncBusy((b) => ({ ...b, [groupId]: true }));
+      let ok = 0;
+      let fail = 0;
+      for (const p of section.repos) {
+        try {
+          const v = await api.sync(p);
+          if (p === selected) setView(v);
+          ok++;
+        } catch {
+          fail++;
+        }
+      }
+      setGroupSyncBusy((b) => {
+        const { [groupId]: _drop, ...rest } = b;
+        return rest;
+      });
+      notify(fail === 0 ? `Synced ${ok} repo(s) ✓` : `Synced ${ok}, ${fail} failed`);
+      checkAllUpdates();
+    },
+    [sections, selected, checkAllUpdates]
+  );
 
   function onAction(kind: BranchActionKind, branch: Branch) {
     if (!selected) return;
@@ -316,6 +431,7 @@ export default function App() {
           onAction={onAction}
           onClose={() => setInspect(null)}
           onOpenPr={(n) => setInspectPr(n)}
+          onEdited={(v) => setView(v)}
         />
       )
     ) : null);
@@ -331,11 +447,19 @@ export default function App() {
     <button
       title={label}
       onClick={() => switchView(mode)}
-      className={`rounded p-1 ${
-        viewMode === mode
-          ? "bg-neutral-700 text-neutral-100"
-          : "text-neutral-400 hover:text-neutral-200"
-      }`}
+      className={
+        isModern
+          ? `rounded-md px-2 py-1 transition-colors ${
+              viewMode === mode
+                ? "bg-neutral-700/80 text-neutral-50 shadow-sm"
+                : "text-neutral-400 hover:bg-neutral-800/70 hover:text-neutral-100"
+            }`
+          : `rounded p-1 ${
+              viewMode === mode
+                ? "bg-neutral-700 text-neutral-100"
+                : "text-neutral-400 hover:text-neutral-200"
+            }`
+      }
     >
       {icon}
     </button>
@@ -345,97 +469,182 @@ export default function App() {
     <div className="flex h-screen w-screen bg-neutral-950 text-neutral-200">
       {/* Sidebar */}
       <aside className="flex w-64 shrink-0 flex-col border-r border-neutral-800 bg-neutral-900/40">
-        <div className="flex h-14 items-center gap-2 border-b border-neutral-800 px-4">
-          <GitBranch className="h-5 w-5 text-indigo-400" />
-          <span className="font-semibold tracking-tight">gitui</span>
-          <span className="text-xs text-neutral-500">stacked PRs</span>
-        </div>
+        {isModern ? (
+          <div className="flex h-16 items-center gap-2.5 border-b border-neutral-800 px-4">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500/15 ring-1 ring-indigo-500/30">
+              <GitBranch className="h-4 w-4 text-indigo-400" />
+            </div>
+            <div className="leading-tight">
+              <div className="text-[15px] font-semibold tracking-tight text-neutral-100">
+                gitui
+              </div>
+              <div className="text-[10px] uppercase tracking-wider text-neutral-500">
+                stacked PRs
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="flex h-14 items-center gap-2 border-b border-neutral-800 px-4">
+            <GitBranch className="h-5 w-5 text-indigo-400" />
+            <span className="font-semibold tracking-tight">gitui</span>
+            <span className="text-xs text-neutral-500">stacked PRs</span>
+          </div>
+        )}
 
         <button
           onClick={() => setWorkspace(true)}
           disabled={repos.length === 0}
-          className={`mx-2 mt-2 flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm disabled:opacity-40 ${
-            workspace
-              ? "bg-neutral-800 text-neutral-100"
-              : "text-neutral-300 hover:bg-neutral-900"
-          }`}
+          className={
+            isModern
+              ? `mx-2 mt-2 flex items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm transition-colors disabled:opacity-40 ${
+                  workspace
+                    ? "bg-indigo-500/10 text-neutral-100 ring-1 ring-inset ring-indigo-500/25"
+                    : "text-neutral-300 hover:bg-neutral-800/60"
+                }`
+              : `mx-2 mt-2 flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm disabled:opacity-40 ${
+                  workspace
+                    ? "bg-neutral-800 text-neutral-100"
+                    : "text-neutral-300 hover:bg-neutral-900"
+                }`
+          }
         >
           <Boxes className="h-4 w-4 text-indigo-400" />
           Workspace
-          <span className="ml-auto text-xs text-neutral-500">{repos.length}</span>
+          <span
+            className={
+              isModern
+                ? "ml-auto rounded-full bg-neutral-800 px-1.5 text-[11px] text-neutral-400"
+                : "ml-auto text-xs text-neutral-500"
+            }
+          >
+            {repos.length}
+          </span>
         </button>
         <div className="flex items-center justify-between px-4 py-3">
           <span className="text-xs uppercase tracking-wider text-neutral-500">
             Repositories
           </span>
-          <button
-            onClick={() => setShowAdd(true)}
-            title="Add repository"
-            className="rounded p-1 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100"
-          >
-            <FolderPlus className="h-4 w-4" />
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-auto px-2">
-          {repos.length === 0 && (
-            <div className="px-2 text-sm text-neutral-600">No repository yet.</div>
-          )}
-          {repos.map((p) => (
+          <div className="flex items-center gap-0.5">
             <button
-              key={p}
-              onClick={() => openRepo(p)}
-              title={p}
-              className={`group flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm ${
-                selected === p && !workspace
-                  ? "bg-neutral-800 text-neutral-100"
-                  : "text-neutral-400 hover:bg-neutral-900"
-              }`}
+              onClick={() => setGroupDialog({ mode: "new" })}
+              title="New group"
+              className="rounded p-1 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100"
             >
-              <span className="truncate">{repoName(p)}</span>
-              <span className="ml-auto flex items-center gap-1">
-                {updates[p]?.length ? (
-                  <span
-                    title={`${updates[p].length} new update(s)`}
-                    className="rounded-full bg-indigo-600 px-1.5 text-[10px] font-semibold text-white"
-                  >
-                    {updates[p].length}
-                  </span>
-                ) : null}
-                <span
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    removeRepo(p);
-                  }}
-                  className="hidden text-neutral-600 hover:text-rose-400 group-hover:block"
-                >
-                  ✕
-                </span>
-              </span>
+              <FolderTree className="h-4 w-4" />
             </button>
-          ))}
+            <button
+              onClick={() => setShowAdd(true)}
+              title="Add repository"
+              className="rounded p-1 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100"
+            >
+              <FolderPlus className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
-        <div className="border-t border-neutral-800 px-4 py-2 text-xs">
+        <Sidebar
+          sections={sections}
+          groups={groupState.groups}
+          selected={selected}
+          workspace={workspace}
+          updates={updates}
+          groupSyncBusy={groupSyncBusy}
+          onOpenRepo={openRepo}
+          onRemoveRepo={removeRepo}
+          onAssignRepo={(path, gid) => mutateGroups((s) => assignRepo(s, path, gid))}
+          onCreateGroupForRepo={(path) => setGroupDialog({ mode: "assign", path })}
+          onToggleCollapsed={(id) => mutateGroups((s) => toggleCollapsed(s, id))}
+          onRenameGroup={(id) => setGroupDialog({ mode: "rename", id })}
+          onDeleteGroup={(id) => {
+            mutateGroups((s) => deleteGroup(s, id));
+            setWorkspaceGroup((w) => (w === id ? null : w));
+          }}
+          onSyncGroup={syncGroup}
+        />
+
+        <div className="flex items-center justify-between border-t border-neutral-800 px-4 py-2 text-xs">
           {health?.ghAuthenticated ? (
-            <span className="text-emerald-400">● {health.ghAccount ?? "gh"}</span>
+            isModern ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2 py-0.5 text-emerald-400 ring-1 ring-inset ring-emerald-500/20">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                {health.ghAccount ?? "gh"}
+              </span>
+            ) : (
+              <span className="text-emerald-400">● {health.ghAccount ?? "gh"}</span>
+            )
+          ) : isModern ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-neutral-800/60 px-2 py-0.5 text-neutral-500">
+              <span className="h-1.5 w-1.5 rounded-full bg-neutral-600" />
+              gh: not logged in
+            </span>
           ) : (
             <span className="text-neutral-500">gh: not logged in</span>
           )}
+          <button
+            onClick={() => setShowSettings(true)}
+            title="Settings"
+            className="rounded p-1 text-neutral-500 hover:bg-neutral-800 hover:text-neutral-200"
+          >
+            <SettingsIcon className="h-3.5 w-3.5" />
+          </button>
         </div>
       </aside>
 
       {/* Main */}
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <header className="flex h-14 shrink-0 items-center gap-3 border-b border-neutral-800 px-6">
+        <header
+          className={`flex shrink-0 items-center gap-3 border-b border-neutral-800 px-6 ${
+            isModern ? "h-16" : "h-14"
+          }`}
+        >
           {workspace ? (
-            <h1 className="text-sm font-medium text-neutral-200">
-              Workspace — repository links
-            </h1>
+            <>
+              <h1 className="text-sm font-medium text-neutral-200">
+                Workspace — repository links
+              </h1>
+              {groupState.groups.length > 0 && (
+                <div className="ml-auto">
+                  <WorkspaceGroupFilter
+                    groups={groupState.groups}
+                    value={workspaceGroup}
+                    onChange={setWorkspaceGroup}
+                  />
+                </div>
+              )}
+            </>
+          ) : switchingRepo ? (
+            <>
+              <Spinner className="h-4 w-4" />
+              <h1
+                className={
+                  isModern
+                    ? "text-[15px] font-semibold tracking-tight text-neutral-100"
+                    : "text-sm font-medium text-neutral-200"
+                }
+              >
+                {repoName(selected!)}
+              </h1>
+              <span className="text-xs text-neutral-500">Loading…</span>
+            </>
           ) : view ? (
             <>
-              <h1 className="text-sm font-medium text-neutral-200">{view.name}</h1>
-              <span className="rounded bg-neutral-800 px-2 py-0.5 font-mono text-xs text-neutral-400">
+              <h1
+                className={
+                  isModern
+                    ? "text-[15px] font-semibold tracking-tight text-neutral-100"
+                    : "text-sm font-medium text-neutral-200"
+                }
+              >
+                {view.name}
+              </h1>
+              <span
+                className={
+                  isModern
+                    ? "inline-flex items-center gap-1.5 rounded-full border border-neutral-700/70 bg-neutral-900/60 px-2.5 py-0.5 font-mono text-[11px] text-neutral-400"
+                    : "rounded bg-neutral-800 px-2 py-0.5 font-mono text-xs text-neutral-400"
+                }
+              >
+                {isModern && <GitBranch className="h-3 w-3 text-indigo-400" />}
                 trunk: {view.trunk}
               </span>
               {!view.prsAvailable && (
@@ -458,7 +667,13 @@ export default function App() {
                     </span>
                   )}
                 </button>
-                <div className="flex rounded-md border border-neutral-700 p-0.5">
+                <div
+                  className={
+                    isModern
+                      ? "flex gap-0.5 rounded-lg border border-neutral-700/80 bg-neutral-900/40 p-1"
+                      : "flex rounded-md border border-neutral-700 p-0.5"
+                  }
+                >
                   {toggle("graph", "Branch graph", <Network className="h-4 w-4" />)}
                   {toggle("commits", "Commit graph", <Waypoints className="h-4 w-4" />)}
                   {toggle("tree", "Tree", <ListTree className="h-4 w-4" />)}
@@ -466,6 +681,7 @@ export default function App() {
                   {toggle("issues", "Issues", <CircleDot className="h-4 w-4" />)}
                   {toggle("docs", "Markdown docs", <FileText className="h-4 w-4" />)}
                 </div>
+                {isModern && <div className="mx-0.5 h-5 w-px bg-neutral-800" />}
                 <button
                   onClick={async () => {
                     if (selected && (await runMutation(api.sync(selected)))) notify("Synced ✓");
@@ -504,6 +720,7 @@ export default function App() {
                 >
                   <GitPullRequest className="h-3.5 w-3.5" /> Submit
                 </button>
+                {isModern && <div className="mx-0.5 h-5 w-px bg-neutral-800" />}
                 <button
                   onClick={() =>
                     selected &&
@@ -531,20 +748,27 @@ export default function App() {
         <div className="flex min-h-0 flex-1">
           {workspace ? (
             <div className="min-w-0 flex-1">
-              <RepoGraphView repos={repos} onOpenRepo={openRepo} />
+              <RepoGraphView
+                repos={workspaceRepos}
+                groups={groupState.groups}
+                assignments={groupState.assignments}
+                onOpenRepo={openRepo}
+              />
             </div>
           ) : (
             <>
               {/* View region */}
               <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-                {(view?.conflict || error) && (
+                {!switchingRepo && (view?.conflict || error) && (
                   <div className="space-y-3 border-b border-neutral-800 p-4">
                     {view?.conflict && selected && (
                       <ConflictPanel
                         conflict={view.conflict}
+                        repoPath={selected}
                         busy={loading}
                         onContinue={() => runMutation(api.continueRestack(selected))}
                         onAbort={() => runMutation(api.abortRestack(selected))}
+                        onResolved={(v) => setView(v)}
                       />
                     )}
                     {error && (
@@ -557,15 +781,43 @@ export default function App() {
 
                 <div className="min-h-0 flex-1">
                   {!selected ? (
-                    <div className="flex h-full flex-col items-center justify-center text-center text-neutral-600">
-                      <GitBranch className="mb-3 h-10 w-10 text-neutral-700" />
-                      <p className="text-sm">Add a git repository to see your branch stack.</p>
-                      <button
-                        onClick={() => setShowAdd(true)}
-                        className="mt-4 inline-flex items-center gap-2 rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500"
-                      >
-                        <FolderPlus className="h-4 w-4" /> Add repository
-                      </button>
+                    isModern ? (
+                      <div className="flex h-full flex-col items-center justify-center px-6 text-center">
+                        <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-500/10 ring-1 ring-inset ring-indigo-500/25">
+                          <GitBranch className="h-8 w-8 text-indigo-400" />
+                        </div>
+                        <h2 className="text-base font-semibold text-neutral-100">
+                          No repository yet
+                        </h2>
+                        <p className="mt-1 max-w-xs text-sm text-neutral-500">
+                          Add a git repository to visualize and manage your stacked branches
+                          and pull requests.
+                        </p>
+                        <button
+                          onClick={() => setShowAdd(true)}
+                          className="mt-5 inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-500"
+                        >
+                          <FolderPlus className="h-4 w-4" /> Add repository
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex h-full flex-col items-center justify-center text-center text-neutral-600">
+                        <GitBranch className="mb-3 h-10 w-10 text-neutral-700" />
+                        <p className="text-sm">Add a git repository to see your branch stack.</p>
+                        <button
+                          onClick={() => setShowAdd(true)}
+                          className="mt-4 inline-flex items-center gap-2 rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500"
+                        >
+                          <FolderPlus className="h-4 w-4" /> Add repository
+                        </button>
+                      </div>
+                    )
+                  ) : switchingRepo ? (
+                    <div className="flex h-full flex-col items-center justify-center gap-3">
+                      <Spinner className="h-7 w-7" />
+                      <p className="text-sm text-neutral-500">
+                        Loading {repoName(selected)}…
+                      </p>
                     </div>
                   ) : !view ? null : viewMode === "issues" ? (
                     <IssuesList
@@ -702,6 +954,53 @@ export default function App() {
       )}
       {showAdd && (
         <AddRepoDialog onClose={() => setShowAdd(false)} onDone={registerRepo} />
+      )}
+      {showSettings && (
+        <SettingsModal
+          settings={settings}
+          onClose={() => setShowSettings(false)}
+          onSave={(s) => {
+            setSettings(s);
+            saveSettings(s);
+            setShowSettings(false);
+          }}
+        />
+      )}
+      {groupDialog?.mode === "new" && (
+        <GroupNameDialog
+          title="New group"
+          confirmLabel="Create"
+          onClose={() => setGroupDialog(null)}
+          onSubmit={(name) => {
+            mutateGroups((s) => createGroup(s, name).state);
+            setGroupDialog(null);
+          }}
+        />
+      )}
+      {groupDialog?.mode === "assign" && (
+        <GroupNameDialog
+          title="New group"
+          confirmLabel="Create & move"
+          onClose={() => setGroupDialog(null)}
+          onSubmit={(name) => {
+            createGroupAndAssign(groupDialog.path, name);
+            setGroupDialog(null);
+          }}
+        />
+      )}
+      {groupDialog?.mode === "rename" && (
+        <GroupNameDialog
+          title="Rename group"
+          confirmLabel="Rename"
+          initial={
+            groupState.groups.find((g) => g.id === groupDialog.id)?.name ?? ""
+          }
+          onClose={() => setGroupDialog(null)}
+          onSubmit={(name) => {
+            mutateGroups((s) => renameGroup(s, groupDialog.id, name));
+            setGroupDialog(null);
+          }}
+        />
       )}
       {toast && (
         <div className="fixed bottom-4 right-4 z-50 rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 shadow-lg">

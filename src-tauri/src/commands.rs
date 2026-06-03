@@ -1,6 +1,7 @@
 use crate::error::{AppError, Result};
 use crate::model::{
-    Branch, CommitDetail, CommitInfo, CommitNode, ConflictState, RepoView, StackNode, SubmitStepInfo,
+    Branch, CommitDetail, CommitInfo, CommitNode, ConflictState, ConflictSuggestion, PrReview,
+    RepoView, StackNode, SubmitStepInfo,
 };
 use crate::{assist, git, github, links, meta, proc, stack};
 use serde::Serialize;
@@ -425,6 +426,167 @@ pub fn branch_commits(path: String, branch: String) -> Result<Vec<CommitInfo>> {
     git::commits(repo, base.as_deref(), &branch, 30)
 }
 
+// --- Commit editing (programmatic interactive rebase) ---
+
+/// The upstream a branch's own commits sit on: its recorded stack parent, or the
+/// trunk. Editing the trunk's commits is intentionally not supported.
+fn edit_base(repo: &Path, branch: &str) -> Result<String> {
+    let raw = git::local_branches(repo)?;
+    let trunk = git::trunk(repo, &raw);
+    if branch == trunk {
+        return Err(AppError::new(
+            "Commit editing is only available on stacked branches, not the trunk",
+        ));
+    }
+    let metas = meta::all(repo);
+    Ok(metas
+        .get(branch)
+        .and_then(|m| m.parent.clone())
+        .unwrap_or(trunk))
+}
+
+/// Full commit SHAs in `base..branch`, oldest-first (rebase todo order).
+fn branch_commit_shas(repo: &Path, base: &str, branch: &str) -> Result<Vec<String>> {
+    let range = format!("{base}..{branch}");
+    let out = git::git(repo, &["log", "--format=%H", "--reverse", &range])?;
+    Ok(out
+        .lines()
+        .map(|l| l.trim().to_string())
+        .filter(|l| !l.is_empty())
+        .collect())
+}
+
+/// Resolve a (possibly short) sha to full form and ensure it belongs to `shas`.
+fn resolve_on_branch(repo: &Path, shas: &[String], sha: &str) -> Result<String> {
+    let full = git::git(repo, &["rev-parse", sha])?.trim().to_string();
+    if !shas.iter().any(|s| s == &full) {
+        return Err(AppError::new("That commit is not on this branch"));
+    }
+    Ok(full)
+}
+
+/// Run a prepared rebase todo on `branch`, then restack its descendants onto the
+/// rewritten tip. A conflict mid-rebase surfaces via the usual ConflictState.
+fn apply_edit(
+    repo: &Path,
+    base: &str,
+    branch: &str,
+    todo: &str,
+    msg: Option<&str>,
+) -> Result<RepoView> {
+    if git::rebase_in_progress(repo) {
+        return Err(AppError::new("Finish the in-progress restack first"));
+    }
+    if git::is_dirty(repo) {
+        return Err(AppError::new("Commit or stash your changes before editing commits"));
+    }
+    let clean = git::rebase_edit(repo, base, branch, todo, msg)?;
+    if clean {
+        // Rewriting the branch moved its tip; restack the whole stack so any
+        // descendants follow onto the new commits (no-op for already-based branches).
+        stack::run(repo, None)?;
+    }
+    build_view(repo)
+}
+
+/// Replace a commit's message.
+#[tauri::command]
+pub fn reword_commit(
+    path: String,
+    branch: String,
+    sha: String,
+    message: String,
+) -> Result<RepoView> {
+    let root = git::repo_root(Path::new(&path))?;
+    let repo = Path::new(&root);
+    let base = edit_base(repo, &branch)?;
+    let shas = branch_commit_shas(repo, &base, &branch)?;
+    let full = resolve_on_branch(repo, &shas, &sha)?;
+    let todo = shas
+        .iter()
+        .map(|s| format!("{} {}", if *s == full { "reword" } else { "pick" }, s))
+        .collect::<Vec<_>>()
+        .join("\n");
+    apply_edit(repo, &base, &branch, &todo, Some(&message))
+}
+
+/// Remove a commit from the branch.
+#[tauri::command]
+pub fn drop_commit(path: String, branch: String, sha: String) -> Result<RepoView> {
+    let root = git::repo_root(Path::new(&path))?;
+    let repo = Path::new(&root);
+    let base = edit_base(repo, &branch)?;
+    let shas = branch_commit_shas(repo, &base, &branch)?;
+    if shas.len() <= 1 {
+        return Err(AppError::new("Cannot drop the only commit on the branch"));
+    }
+    let full = resolve_on_branch(repo, &shas, &sha)?;
+    let todo = shas
+        .iter()
+        .filter(|s| **s != full)
+        .map(|s| format!("pick {s}"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    apply_edit(repo, &base, &branch, &todo, None)
+}
+
+/// Move a commit one step toward the tip ("up") or toward the base ("down").
+/// The commit list is shown newest-first, so "up" means newer.
+#[tauri::command]
+pub fn move_commit(
+    path: String,
+    branch: String,
+    sha: String,
+    direction: String,
+) -> Result<RepoView> {
+    let root = git::repo_root(Path::new(&path))?;
+    let repo = Path::new(&root);
+    let base = edit_base(repo, &branch)?;
+    let mut shas = branch_commit_shas(repo, &base, &branch)?;
+    let full = resolve_on_branch(repo, &shas, &sha)?;
+    let i = shas.iter().position(|s| *s == full).unwrap();
+    match direction.as_str() {
+        "up" => {
+            if i + 1 >= shas.len() {
+                return Err(AppError::new("Already the newest commit"));
+            }
+            shas.swap(i, i + 1);
+        }
+        "down" => {
+            if i == 0 {
+                return Err(AppError::new("Already the oldest commit"));
+            }
+            shas.swap(i, i - 1);
+        }
+        _ => return Err(AppError::new("Invalid move direction")),
+    }
+    let todo = shas
+        .iter()
+        .map(|s| format!("pick {s}"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    apply_edit(repo, &base, &branch, &todo, None)
+}
+
+/// Squash a commit into the one before it (fixup — keeps the earlier message).
+#[tauri::command]
+pub fn squash_commit(path: String, branch: String, sha: String) -> Result<RepoView> {
+    let root = git::repo_root(Path::new(&path))?;
+    let repo = Path::new(&root);
+    let base = edit_base(repo, &branch)?;
+    let shas = branch_commit_shas(repo, &base, &branch)?;
+    let full = resolve_on_branch(repo, &shas, &sha)?;
+    if shas.first() == Some(&full) {
+        return Err(AppError::new("No earlier commit to squash into"));
+    }
+    let todo = shas
+        .iter()
+        .map(|s| format!("{} {}", if *s == full { "fixup" } else { "pick" }, s))
+        .collect::<Vec<_>>()
+        .join("\n");
+    apply_edit(repo, &base, &branch, &todo, None)
+}
+
 /// The commit DAG with branch tips labeled. `branches` (when non-empty) restricts the
 /// view to those branches; None/empty shows trunk + every local branch (default).
 #[tauri::command]
@@ -507,6 +669,81 @@ pub fn analyze_commit(path: String, sha: String, mode: String) -> Result<()> {
 pub fn pr_detail(path: String, number: u64) -> Result<crate::model::PrDetail> {
     let root = git::repo_root(Path::new(&path))?;
     github::pr_detail(Path::new(&root), number)
+}
+
+/// AI review of a PR: feed the unified diff to `claude` and return structured findings.
+/// Async (off the main thread via `spawn_blocking`) — the model call takes tens of seconds.
+#[tauri::command]
+pub async fn review_pr(path: String, number: u64) -> Result<PrReview> {
+    tauri::async_runtime::spawn_blocking(move || -> Result<PrReview> {
+        let root = git::repo_root(Path::new(&path))?;
+        let repo = Path::new(&root);
+        let detail = github::pr_detail(repo, number)?;
+        let out = assist::run_claude_headless(repo, &assist::pr_review_prompt(&detail))?;
+        let json = assist::extract_json(&out)?;
+        serde_json::from_str::<PrReview>(json)
+            .map_err(|e| AppError::new(format!("bad review JSON: {e}")))
+    })
+    .await
+    .map_err(|e| AppError::new(e.to_string()))?
+}
+
+#[derive(serde::Deserialize)]
+struct ConflictRaw {
+    #[serde(default)]
+    explanation: String,
+    // Required (no default): a missing/renamed resolution must error rather than
+    // silently wipe the file. Accept the common synonyms the model may emit.
+    #[serde(alias = "merged", alias = "content", alias = "resolved")]
+    resolution: String,
+}
+
+/// AI assistance for one conflicted file: send its content (with markers) plus the
+/// base/ours/theirs versions to `claude` and return a proposed full-file resolution.
+#[tauri::command]
+pub async fn suggest_conflict_resolution(
+    path: String,
+    file: String,
+) -> Result<ConflictSuggestion> {
+    tauri::async_runtime::spawn_blocking(move || -> Result<ConflictSuggestion> {
+        let root = git::repo_root(Path::new(&path))?;
+        let repo = Path::new(&root);
+        let marked = git::read_working_file(repo, &file)?;
+        let (base, ours, theirs) = git::conflict_versions(repo, &file);
+        let prompt = assist::conflict_resolution_prompt(
+            &file,
+            &marked,
+            base.as_deref(),
+            ours.as_deref(),
+            theirs.as_deref(),
+        );
+        let out = assist::run_claude_headless(repo, &prompt)?;
+        let json = assist::extract_json(&out)?;
+        let raw: ConflictRaw = serde_json::from_str(json)
+            .map_err(|e| AppError::new(format!("bad resolution JSON: {e}")))?;
+        Ok(ConflictSuggestion {
+            file,
+            explanation: raw.explanation,
+            resolution: raw.resolution,
+        })
+    })
+    .await
+    .map_err(|e| AppError::new(e.to_string()))?
+}
+
+/// Write an AI-resolved file back to the working tree, stage it (so it drops out of
+/// the conflicted set), and return the refreshed view.
+#[tauri::command]
+pub fn apply_conflict_resolution(
+    path: String,
+    file: String,
+    content: String,
+) -> Result<RepoView> {
+    let root = git::repo_root(Path::new(&path))?;
+    let repo = Path::new(&root);
+    git::write_working_file(repo, &file, &content)?;
+    git::stage_file(repo, &file)?;
+    build_view(repo)
 }
 
 /// List issues (`state` = "open" | "closed" | "all"). Empty list when gh is unavailable.
@@ -811,6 +1048,224 @@ mod tests {
 
     fn commit(repo: &Path, msg: &str) {
         git_ok(repo, &["commit", "--allow-empty", "-m", msg]);
+    }
+
+    // --- commit-editing helpers ---
+    fn edit_subjects(repo: &Path, base: &str, branch: &str) -> Vec<String> {
+        git::git(repo, &["log", "--format=%s", &format!("{base}..{branch}"), "--reverse"])
+            .unwrap()
+            .lines()
+            .map(|s| s.to_string())
+            .collect()
+    }
+    fn nth_sha(repo: &Path, base: &str, branch: &str, idx: usize) -> String {
+        git::git(repo, &["log", "--format=%H", &format!("{base}..{branch}"), "--reverse"])
+            .unwrap()
+            .lines()
+            .nth(idx)
+            .unwrap()
+            .trim()
+            .to_string()
+    }
+    /// A `feat` branch (parent main) carrying empty commits with the given messages.
+    fn feat_with(repo: &Path, msgs: &[&str]) -> String {
+        git_ok(repo, &["checkout", "-b", "feat"]);
+        for m in msgs {
+            commit(repo, m);
+        }
+        git_ok(repo, &["config", "branch.feat.gitstack-parent", "main"]);
+        repo.to_string_lossy().to_string()
+    }
+
+    #[test]
+    fn reword_changes_only_the_target_message() {
+        let dir = tempfile::tempdir().unwrap();
+        let repo = dir.path();
+        init_repo(repo);
+        let path = feat_with(repo, &["c1", "c2"]);
+        let c1 = nth_sha(repo, "main", "feat", 0);
+
+        reword_commit(path, "feat".into(), c1, "c1 reworded".into()).unwrap();
+
+        assert_eq!(edit_subjects(repo, "main", "feat"), vec!["c1 reworded", "c2"]);
+    }
+
+    #[test]
+    fn drop_removes_the_target_commit() {
+        let dir = tempfile::tempdir().unwrap();
+        let repo = dir.path();
+        init_repo(repo);
+        let path = feat_with(repo, &["c1", "c2", "c3"]);
+        let c2 = nth_sha(repo, "main", "feat", 1);
+
+        drop_commit(path, "feat".into(), c2).unwrap();
+
+        assert_eq!(edit_subjects(repo, "main", "feat"), vec!["c1", "c3"]);
+    }
+
+    #[test]
+    fn drop_refuses_the_only_commit() {
+        let dir = tempfile::tempdir().unwrap();
+        let repo = dir.path();
+        init_repo(repo);
+        let path = feat_with(repo, &["only"]);
+        let sha = nth_sha(repo, "main", "feat", 0);
+
+        assert!(drop_commit(path, "feat".into(), sha).is_err());
+    }
+
+    #[test]
+    fn move_up_makes_a_commit_newer() {
+        let dir = tempfile::tempdir().unwrap();
+        let repo = dir.path();
+        init_repo(repo);
+        let path = feat_with(repo, &["c1", "c2"]);
+        let c1 = nth_sha(repo, "main", "feat", 0);
+
+        // c1 is oldest; "up" = newer → order becomes c2, c1.
+        move_commit(path, "feat".into(), c1, "up".into()).unwrap();
+
+        assert_eq!(edit_subjects(repo, "main", "feat"), vec!["c2", "c1"]);
+    }
+
+    #[test]
+    fn squash_fixups_into_previous() {
+        let dir = tempfile::tempdir().unwrap();
+        let repo = dir.path();
+        init_repo(repo);
+        let path = feat_with(repo, &["c1", "c2"]);
+        let c2 = nth_sha(repo, "main", "feat", 1);
+
+        squash_commit(path, "feat".into(), c2).unwrap();
+
+        // fixup keeps the earlier message and collapses to a single commit.
+        assert_eq!(edit_subjects(repo, "main", "feat"), vec!["c1"]);
+    }
+
+    #[test]
+    fn squash_refuses_the_oldest_commit() {
+        let dir = tempfile::tempdir().unwrap();
+        let repo = dir.path();
+        init_repo(repo);
+        let path = feat_with(repo, &["c1", "c2"]);
+        let c1 = nth_sha(repo, "main", "feat", 0);
+
+        assert!(squash_commit(path, "feat".into(), c1).is_err());
+    }
+
+    #[test]
+    fn editing_a_parent_restacks_its_child() {
+        let dir = tempfile::tempdir().unwrap();
+        let repo = dir.path();
+        init_repo(repo);
+        git_ok(repo, &["checkout", "-b", "feat-a"]);
+        commit_file(repo, "a.txt", "a1\n", "a1");
+        git_ok(repo, &["config", "branch.feat-a.gitstack-parent", "main"]);
+        git_ok(repo, &["checkout", "-b", "feat-b"]);
+        commit_file(repo, "b.txt", "b1\n", "b1");
+        git_ok(repo, &["config", "branch.feat-b.gitstack-parent", "feat-a"]);
+        let path = repo.to_string_lossy().to_string();
+
+        let a1 = nth_sha(repo, "main", "feat-a", 0);
+        reword_commit(path, "feat-a".into(), a1, "a1 reworded".into()).unwrap();
+
+        // The child must have followed the rewritten parent: still 1 ahead, 0 behind.
+        let view = build_view(repo).unwrap();
+        let a = &view.roots[0].children[0];
+        assert_eq!(a.branch.name, "feat-a");
+        let b = &a.children[0];
+        assert_eq!(b.branch.name, "feat-b");
+        assert_eq!(b.branch.behind, 0, "child should be restacked onto the new parent tip");
+        assert_eq!(b.branch.ahead, 1);
+    }
+
+    #[test]
+    fn reordering_conflicting_commits_surfaces_a_conflict() {
+        let dir = tempfile::tempdir().unwrap();
+        let repo = dir.path();
+        init_repo(repo);
+        git_ok(repo, &["checkout", "-b", "feat"]);
+        commit_file(repo, "f.txt", "A\n", "c1 adds A");
+        commit_file(repo, "f.txt", "B\n", "c2 sets B");
+        git_ok(repo, &["config", "branch.feat.gitstack-parent", "main"]);
+        let path = repo.to_string_lossy().to_string();
+        let c1 = nth_sha(repo, "main", "feat", 0);
+
+        // Moving c1 after c2 replays both onto base and collides on f.txt.
+        let view = move_commit(path, "feat".into(), c1, "up".into()).unwrap();
+        assert!(view.conflict.is_some(), "expected a conflict to surface via ConflictState");
+
+        // The existing abort flow must clean it up.
+        abort_restack(repo.to_string_lossy().to_string()).unwrap();
+        assert!(!git::rebase_in_progress(repo));
+    }
+
+    #[test]
+    fn pr_review_parses_drifted_llm_keys() {
+        // Observed real claude output: array labeled `issues`, fields path/message/description.
+        let json = r#"{"summary":"s","issues":[{"path":"a.js","line":3,"severity":"warning","message":"off-by-one","description":"loop uses <="}]}"#;
+        let r: crate::model::PrReview = serde_json::from_str(json).unwrap();
+        assert_eq!(r.summary, "s");
+        assert_eq!(r.findings.len(), 1);
+        assert_eq!(r.findings[0].file, "a.js");
+        assert_eq!(r.findings[0].line, Some(3));
+        assert_eq!(r.findings[0].title, "off-by-one");
+        assert_eq!(r.findings[0].detail, "loop uses <=");
+    }
+
+    #[test]
+    fn conflict_resolution_parses_synonym_keys() {
+        let json = r#"{"explanation":"e","merged":"final content"}"#;
+        let r: ConflictRaw = serde_json::from_str(json).unwrap();
+        assert_eq!(r.explanation, "e");
+        assert_eq!(r.resolution, "final content");
+    }
+
+    // End-to-end: hits the REAL claude CLI + gh against the local sandbox PR #3.
+    // Run explicitly: cargo test --lib e2e_review_sandbox_pr -- --ignored --nocapture
+    #[test]
+    #[ignore]
+    fn e2e_review_sandbox_pr() {
+        let path = r"C:\Users\coren\Documents\projet\gitui-sandbox".to_string();
+        let review = tauri::async_runtime::block_on(review_pr(path, 3)).expect("review_pr");
+        eprintln!("summary: {}", review.summary);
+        for f in &review.findings {
+            eprintln!("[{}] {}:{:?} — {}", f.severity, f.file, f.line, f.title);
+        }
+        assert!(!review.summary.is_empty(), "expected a non-empty summary");
+    }
+
+    // End-to-end: real claude resolving a real conflict, then applying it.
+    // Run explicitly: cargo test --lib e2e_suggest_and_apply_conflict -- --ignored --nocapture
+    #[test]
+    #[ignore]
+    fn e2e_suggest_and_apply_conflict() {
+        let dir = tempfile::tempdir().unwrap();
+        let repo = dir.path();
+        init_repo(repo);
+        git_ok(repo, &["checkout", "-b", "feat"]);
+        commit_file(repo, "config.json", "{\n  \"port\": 3000\n}\n", "feat sets 3000");
+        git_ok(repo, &["config", "branch.feat.gitstack-parent", "main"]);
+        git_ok(repo, &["checkout", "main"]);
+        commit_file(repo, "config.json", "{\n  \"port\": 8080\n}\n", "main sets 8080");
+        git_ok(repo, &["checkout", "feat"]);
+
+        let path = repo.to_string_lossy().to_string();
+        let view = restack(path.clone(), None).unwrap();
+        let file = view.conflict.expect("expected conflict").files[0].clone();
+
+        let sugg = tauri::async_runtime::block_on(suggest_conflict_resolution(
+            path.clone(),
+            file.clone(),
+        ))
+        .expect("suggest");
+        eprintln!("explanation: {}\nresolution:\n{}", sugg.explanation, sugg.resolution);
+        assert!(!sugg.resolution.is_empty());
+        assert!(!sugg.resolution.contains("<<<<<<<"));
+
+        let view2 = apply_conflict_resolution(path, file.clone(), sugg.resolution).unwrap();
+        let still = view2.conflict.map(|c| c.files.contains(&file)).unwrap_or(false);
+        assert!(!still, "file should be staged and out of the conflict list");
     }
 
     #[test]

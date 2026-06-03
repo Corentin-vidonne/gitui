@@ -4,10 +4,12 @@ import type {
   CommitDetail,
   CommitInfo,
   CommitNode,
+  ConflictSuggestion,
   Health,
   IssueDetail,
   IssueSummary,
   PrDetail,
+  PrReview,
   PrSummary,
   RepoGraph,
   RepoView,
@@ -45,12 +47,26 @@ export const api = {
     invoke<RepoView>("publish_branch", { path, branch }),
   branchCommits: (path: string, branch: string) =>
     invoke<CommitInfo[]>("branch_commits", { path, branch }),
+  rewordCommit: (path: string, branch: string, sha: string, message: string) =>
+    invoke<RepoView>("reword_commit", { path, branch, sha, message }),
+  dropCommit: (path: string, branch: string, sha: string) =>
+    invoke<RepoView>("drop_commit", { path, branch, sha }),
+  moveCommit: (path: string, branch: string, sha: string, direction: "up" | "down") =>
+    invoke<RepoView>("move_commit", { path, branch, sha, direction }),
+  squashCommit: (path: string, branch: string, sha: string) =>
+    invoke<RepoView>("squash_commit", { path, branch, sha }),
   stackCommits: (path: string, branches?: string[] | null) =>
     invoke<CommitNode[]>("stack_commits", { path, branches: branches ?? null }),
   commitDetail: (path: string, sha: string) =>
     invoke<CommitDetail>("commit_detail", { path, sha }),
   prDetail: (path: string, number: number) =>
     invoke<PrDetail>("pr_detail", { path, number }),
+  reviewPr: (path: string, number: number) =>
+    invoke<PrReview>("review_pr", { path, number }),
+  suggestConflictResolution: (path: string, file: string) =>
+    invoke<ConflictSuggestion>("suggest_conflict_resolution", { path, file }),
+  applyConflictResolution: (path: string, file: string, content: string) =>
+    invoke<RepoView>("apply_conflict_resolution", { path, file, content }),
   listIssues: (path: string, state: string) =>
     invoke<IssueSummary[]>("list_issues", { path, state }),
   listPullRequests: (path: string, state: string) =>

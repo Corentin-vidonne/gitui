@@ -16,6 +16,32 @@ pub fn git(repo: &Path, args: &[&str]) -> Result<String> {
     Ok(r.stdout)
 }
 
+/// Read a file from the working tree (e.g. a conflicted file with its markers).
+pub fn read_working_file(repo: &Path, rel: &str) -> Result<String> {
+    std::fs::read_to_string(repo.join(rel))
+        .map_err(|e| AppError::new(format!("read {rel}: {e}")))
+}
+
+/// Best-effort base/ours/theirs versions of a conflicted file, from index stages
+/// 1/2/3. Any side may be absent (e.g. add/add or delete conflicts) → `None`.
+pub fn conflict_versions(
+    repo: &Path,
+    rel: &str,
+) -> (Option<String>, Option<String>, Option<String>) {
+    let show = |n: u8| git(repo, &["show", &format!(":{n}:{rel}")]).ok();
+    (show(1), show(2), show(3))
+}
+
+/// Overwrite a working-tree file with resolved content.
+pub fn write_working_file(repo: &Path, rel: &str, content: &str) -> Result<()> {
+    std::fs::write(repo.join(rel), content).map_err(|e| AppError::new(format!("write {rel}: {e}")))
+}
+
+/// Stage a path (`git add`), marking a conflicted file as resolved.
+pub fn stage_file(repo: &Path, rel: &str) -> Result<()> {
+    git(repo, &["add", rel]).map(|_| ())
+}
+
 #[derive(Clone, Debug)]
 pub struct RawBranch {
     pub name: String,
@@ -210,6 +236,62 @@ pub fn rebase_onto(repo: &Path, newbase: &str, oldbase: &str, branch: &str) -> R
             branch,
             r.stderr.trim()
         )))
+    }
+}
+
+static EDIT_SEQ: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+/// Run `git rebase -i <upstream> <branch>` non-interactively by feeding git a
+/// prepared instruction sheet (`todo`) and, for `reword` steps, a `message`.
+/// Git invokes `GIT_SEQUENCE_EDITOR`/`GIT_EDITOR` through its own `sh`, so a
+/// portable `cp <ourfile>` (git appends the destination path) overwrites the
+/// editor's file with ours — no GUI, no shell scripting.
+/// `Ok(true)` = completed, `Ok(false)` = paused on conflict, `Err` = hard failure.
+pub fn rebase_edit(
+    repo: &Path,
+    upstream: &str,
+    branch: &str,
+    todo: &str,
+    message: Option<&str>,
+) -> Result<bool> {
+    let dir = std::env::temp_dir();
+    let n = EDIT_SEQ.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let pid = std::process::id();
+
+    let todo_path = dir.join(format!("gitui-todo-{pid}-{n}.txt"));
+    std::fs::write(&todo_path, todo).map_err(|e| AppError::new(format!("write todo: {e}")))?;
+    let seq_editor = format!("cp '{}'", todo_path.to_string_lossy().replace('\\', "/"));
+
+    let msg_path = match message {
+        Some(m) => {
+            let p = dir.join(format!("gitui-msg-{pid}-{n}.txt"));
+            std::fs::write(&p, m).map_err(|e| AppError::new(format!("write msg: {e}")))?;
+            Some(p)
+        }
+        None => None,
+    };
+    let editor = match &msg_path {
+        Some(p) => format!("cp '{}'", p.to_string_lossy().replace('\\', "/")),
+        None => "true".to_string(),
+    };
+
+    let envs: [(&str, &str); 2] = [
+        ("GIT_SEQUENCE_EDITOR", seq_editor.as_str()),
+        ("GIT_EDITOR", editor.as_str()),
+    ];
+    let r = proc::run_env("git", ["rebase", "-i", upstream, branch], Some(repo), &envs)?;
+
+    let _ = std::fs::remove_file(&todo_path);
+    if let Some(p) = &msg_path {
+        let _ = std::fs::remove_file(p);
+    }
+
+    if r.success {
+        Ok(true)
+    } else if rebase_in_progress(repo) {
+        Ok(false)
+    } else {
+        Err(AppError::new(format!("git rebase -i failed: {}", r.stderr.trim())))
     }
 }
 

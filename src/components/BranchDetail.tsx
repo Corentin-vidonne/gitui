@@ -10,10 +10,18 @@ import {
   Link as LinkIcon,
   ArrowRightToLine,
   UploadCloud,
+  Pencil,
+  Combine,
+  ArrowUp,
+  ArrowDown,
+  Trash2,
+  GitBranch,
 } from "lucide-react";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import type { Branch, BranchActionKind, CommitInfo } from "../lib/types";
-import { api } from "../lib/api";
+import type { Branch, BranchActionKind, CommitInfo, RepoView } from "../lib/types";
+import { api, errorText } from "../lib/api";
+import { useTheme } from "../lib/theme";
+import { Modal } from "./Modal";
 
 function Row({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
@@ -44,24 +52,103 @@ function ActionBtn({
   );
 }
 
+function CommitActionBtn({
+  icon,
+  title,
+  onClick,
+  disabled,
+  danger,
+}: {
+  icon: ReactNode;
+  title: string;
+  onClick: () => void;
+  disabled?: boolean;
+  danger?: boolean;
+}) {
+  return (
+    <button
+      title={title}
+      onClick={onClick}
+      disabled={disabled}
+      className={`rounded p-0.5 disabled:opacity-30 ${
+        danger ? "text-neutral-500 hover:text-rose-400" : "text-neutral-500 hover:text-neutral-200"
+      }`}
+    >
+      {icon}
+    </button>
+  );
+}
+
+function RewordDialog({
+  commit,
+  busy,
+  onSubmit,
+  onClose,
+}: {
+  commit: CommitInfo;
+  busy: boolean;
+  onSubmit: (message: string) => void;
+  onClose: () => void;
+}) {
+  const [msg, setMsg] = useState(commit.subject);
+  return (
+    <Modal title="Reword commit" onClose={onClose}>
+      <div className="space-y-3">
+        <textarea
+          autoFocus
+          value={msg}
+          onChange={(e) => setMsg(e.target.value)}
+          rows={4}
+          className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 outline-none focus:border-indigo-600"
+        />
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={onClose}
+            className="rounded-md px-3 py-1.5 text-sm text-neutral-400 hover:bg-neutral-800"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => onSubmit(msg.trim())}
+            disabled={busy || !msg.trim()}
+            className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
+          >
+            Save
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 export function BranchDetail({
   repoPath,
   branch,
   onAction,
   onClose,
   onOpenPr,
+  onEdited,
 }: {
   repoPath: string;
   branch: Branch;
   onAction: (kind: BranchActionKind, branch: Branch) => void;
   onClose: () => void;
   onOpenPr?: (number: number) => void;
+  /** Called with the refreshed view after a commit edit. */
+  onEdited?: (view: RepoView) => void;
 }) {
+  const { isModern } = useTheme();
   const [commits, setCommits] = useState<CommitInfo[] | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [dialog, setDialog] = useState<
+    { kind: "reword"; commit: CommitInfo } | { kind: "drop"; commit: CommitInfo } | null
+  >(null);
 
   useEffect(() => {
     let alive = true;
     setCommits(null);
+    setEditError(null);
     api
       .branchCommits(repoPath, branch.name)
       .then((c) => alive && setCommits(c))
@@ -71,9 +158,32 @@ export function BranchDetail({
     };
   }, [repoPath, branch.name]);
 
+  // Run a commit-edit mutation, then refresh the branch's commit list and the
+  // parent view. Conflicts come back inside the returned view (handled in App).
+  async function runEdit(p: Promise<RepoView>) {
+    setBusy(true);
+    setEditError(null);
+    try {
+      const view = await p;
+      onEdited?.(view);
+      setCommits(await api.branchCommits(repoPath, branch.name));
+    } catch (e) {
+      setEditError(errorText(e));
+    } finally {
+      setBusy(false);
+      setDialog(null);
+    }
+  }
+
   return (
+    <>
     <aside className="flex h-full w-full flex-col border-l border-neutral-800 bg-neutral-900/40">
-      <div className="flex h-14 items-center gap-2 border-b border-neutral-800 px-4">
+      <div
+        className={`flex items-center gap-2 border-b border-neutral-800 px-4 ${
+          isModern ? "h-16" : "h-14"
+        }`}
+      >
+        {isModern && <GitBranch className="h-4 w-4 shrink-0 text-indigo-400" />}
         <span className="truncate font-mono text-sm text-neutral-100">{branch.name}</span>
         {branch.isTrunk && (
           <span className="rounded bg-amber-900/40 px-1.5 py-0.5 text-[10px] text-amber-300">
@@ -165,18 +275,65 @@ export function BranchDetail({
           {commits && commits.length === 0 && (
             <p className="text-xs text-neutral-600">No commits.</p>
           )}
-          <ul className="space-y-1.5">
-            {commits?.map((c) => (
-              <li key={c.sha} className="flex gap-2">
-                <span className="font-mono text-[11px] text-amber-300/80">{c.sha}</span>
-                <div className="min-w-0">
-                  <p className="truncate text-xs text-neutral-200">{c.subject}</p>
-                  <p className="text-[10px] text-neutral-600">
-                    {c.author} · {c.date}
-                  </p>
-                </div>
-              </li>
-            ))}
+          {editError && (
+            <div className="mb-2 rounded-md border border-red-900 bg-red-950/40 px-2 py-1 text-[11px] text-red-300">
+              {editError}
+            </div>
+          )}
+          <ul className="space-y-0.5">
+            {commits?.map((c, i) => {
+              const isNewest = i === 0;
+              const isOldest = i === commits.length - 1;
+              return (
+                <li
+                  key={c.sha}
+                  className="group flex items-start gap-2 rounded-md px-1 py-1 hover:bg-neutral-900"
+                >
+                  <span className="mt-0.5 font-mono text-[11px] text-amber-300/80">{c.sha}</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-xs text-neutral-200">{c.subject}</p>
+                    <p className="text-[10px] text-neutral-600">
+                      {c.author} · {c.date}
+                    </p>
+                  </div>
+                  {!branch.isTrunk && (
+                    <div className="hidden shrink-0 items-center gap-0.5 group-hover:flex">
+                      <CommitActionBtn
+                        title="Reword"
+                        icon={<Pencil className="h-3.5 w-3.5" />}
+                        onClick={() => setDialog({ kind: "reword", commit: c })}
+                        disabled={busy}
+                      />
+                      <CommitActionBtn
+                        title="Squash into older commit"
+                        icon={<Combine className="h-3.5 w-3.5" />}
+                        onClick={() => runEdit(api.squashCommit(repoPath, branch.name, c.sha))}
+                        disabled={busy || isOldest}
+                      />
+                      <CommitActionBtn
+                        title="Move newer"
+                        icon={<ArrowUp className="h-3.5 w-3.5" />}
+                        onClick={() => runEdit(api.moveCommit(repoPath, branch.name, c.sha, "up"))}
+                        disabled={busy || isNewest}
+                      />
+                      <CommitActionBtn
+                        title="Move older"
+                        icon={<ArrowDown className="h-3.5 w-3.5" />}
+                        onClick={() => runEdit(api.moveCommit(repoPath, branch.name, c.sha, "down"))}
+                        disabled={busy || isOldest}
+                      />
+                      <CommitActionBtn
+                        title="Drop"
+                        icon={<Trash2 className="h-3.5 w-3.5" />}
+                        onClick={() => setDialog({ kind: "drop", commit: c })}
+                        disabled={busy}
+                        danger
+                      />
+                    </div>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </div>
       </div>
@@ -231,5 +388,44 @@ export function BranchDetail({
         </div>
       </div>
     </aside>
+
+      {dialog?.kind === "reword" && (
+        <RewordDialog
+          commit={dialog.commit}
+          busy={busy}
+          onClose={() => setDialog(null)}
+          onSubmit={(msg) =>
+            runEdit(api.rewordCommit(repoPath, branch.name, dialog.commit.sha, msg))
+          }
+        />
+      )}
+      {dialog?.kind === "drop" && (
+        <Modal title="Drop commit" onClose={() => setDialog(null)}>
+          <div className="space-y-3">
+            <p className="text-sm text-neutral-300">
+              Drop <span className="font-mono text-amber-300">{dialog.commit.sha}</span> “
+              {dialog.commit.subject}”? This rewrites the branch history.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setDialog(null)}
+                className="rounded-md px-3 py-1.5 text-sm text-neutral-400 hover:bg-neutral-800"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() =>
+                  runEdit(api.dropCommit(repoPath, branch.name, dialog.commit.sha))
+                }
+                disabled={busy}
+                className="rounded-md bg-rose-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-rose-500 disabled:opacity-50"
+              >
+                Drop
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+    </>
   );
 }

@@ -108,6 +108,113 @@ pub fn pr_analysis_prompt(
     )
 }
 
+/// Run `claude` non-interactively (print mode) and return its stdout. Unlike the
+/// PTY path (which streams free text to a terminal), this is for one-shot calls
+/// whose output we parse as JSON. The needed context is embedded in `prompt`.
+pub fn run_claude_headless(repo: &Path, prompt: &str) -> Result<String> {
+    let claude = resolve_claude();
+    let mut args: Vec<String> = Vec::new();
+    push_allowed_tools(&mut |a| args.push(a.to_string()));
+    args.push("-p".to_string()); // print / non-interactive mode
+    // `--` ends option parsing so the variadic `--allowedTools` can't swallow the prompt.
+    args.push("--".to_string());
+    args.push(prompt.to_string());
+    let r = crate::proc::run(&claude, args.iter().map(String::as_str), Some(repo))
+        .map_err(|e| AppError::new(format!("Could not run claude: {e}")))?;
+    if !r.success {
+        return Err(AppError::new(format!(
+            "claude failed: {}",
+            r.stderr.trim()
+        )));
+    }
+    Ok(r.stdout)
+}
+
+/// Pull the first `{ ... }` object out of model output, tolerating any prose or
+/// Markdown fences the model may wrap around it.
+pub fn extract_json(s: &str) -> Result<&str> {
+    let start = s
+        .find('{')
+        .ok_or_else(|| AppError::new("claude returned no JSON"))?;
+    let end = s
+        .rfind('}')
+        .ok_or_else(|| AppError::new("claude returned no JSON"))?;
+    if end > start {
+        Ok(&s[start..=end])
+    } else {
+        Err(AppError::new("claude returned no JSON"))
+    }
+}
+
+/// Prompt asking `claude` to review a whole PR and return STRUCTURED JSON findings.
+pub fn pr_review_prompt(detail: &crate::model::PrDetail) -> String {
+    let files: Vec<String> = detail.files.iter().map(|f| f.path.clone()).collect();
+    let files_line = if files.is_empty() {
+        "(aucun)".to_string()
+    } else {
+        files.join(", ")
+    };
+    let commits = if detail.commits.is_empty() {
+        "(aucun)".to_string()
+    } else {
+        detail.commits.join("\n- ")
+    };
+    format!(
+        "Tu es un relecteur de code expert et exigeant. Relis la Pull Request #{number} (titre : {title}).\n\
+         Branche : `{head}` → `{base}`. Fichiers : {files_line}.\n\
+         Commits :\n- {commits}\n\n\
+         Voici le DIFF UNIFIÉ COMPLET de la PR (il a pu être tronqué s'il est très volumineux) :\n\
+         ```diff\n{diff}\n```\n\n\
+         Analyse le diff et relève les problèmes concrets et actionnables : bugs, régressions, cas limites, \
+         sécurité, fuites/performances, lisibilité, tests manquants.\n\n\
+         RÉPONDS UNIQUEMENT avec un objet JSON valide — aucun texte avant ou après, pas de balises Markdown. \
+         Les clés JSON doivent être EXACTEMENT `summary` et `findings` (en anglais, pas `issues`). Forme :\n\
+         {{\"summary\": \"<2 à 4 phrases : objectif de la PR et verdict global>\", \
+         \"findings\": [{{\"file\": \"<chemin relatif>\", \"line\": <numéro de ligne ou null>, \
+         \"severity\": \"info|warning|critical\", \"title\": \"<titre court>\", \"detail\": \"<explication + correctif suggéré>\"}}]}}\n\
+         Limite-toi aux ~20 findings les plus importants ; si rien à signaler, renvoie une liste \"findings\" vide. \
+         Rédige summary, title et detail en français.",
+        number = detail.number,
+        title = detail.title.replace('"', "'"),
+        head = detail.head_ref,
+        base = detail.base_ref,
+        files_line = files_line,
+        commits = commits,
+        diff = detail.diff,
+    )
+}
+
+/// Prompt asking `claude` to resolve a single conflicted file and return STRUCTURED JSON.
+pub fn conflict_resolution_prompt(
+    file: &str,
+    marked: &str,
+    base: Option<&str>,
+    ours: Option<&str>,
+    theirs: Option<&str>,
+) -> String {
+    let section = |label: &str, content: Option<&str>| -> String {
+        match content {
+            Some(c) => format!("\n--- {label} ---\n```\n{c}\n```\n"),
+            None => String::new(),
+        }
+    };
+    format!(
+        "Tu es un expert Git. Le fichier `{file}` est en conflit de merge/rebase. \
+         Voici son contenu actuel AVEC les marqueurs de conflit (<<<<<<<, =======, >>>>>>>) :\n\
+         ```\n{marked}\n```\n{base}{ours}{theirs}\n\
+         Résous le conflit en produisant le contenu FINAL et COMPLET du fichier, cohérent et compilable, \
+         en combinant correctement les deux côtés et SANS aucun marqueur de conflit.\n\n\
+         RÉPONDS UNIQUEMENT avec un objet JSON valide — aucun texte avant ou après, pas de Markdown — de la forme :\n\
+         {{\"explanation\": \"<2 à 4 phrases en français : ce que tu as gardé de chaque côté et pourquoi>\", \
+         \"resolution\": \"<contenu COMPLET du fichier résolu, sans marqueurs>\"}}",
+        file = file,
+        marked = marked,
+        base = section("BASE (ancêtre commun)", base),
+        ours = section("OURS (HEAD courant)", ours),
+        theirs = section("THEIRS (commit appliqué)", theirs),
+    )
+}
+
 /// Read-only tools pre-allowed so Claude can inspect a commit without prompting,
 /// while STILL asking before anything that writes or runs arbitrary commands.
 /// `--allowedTools` is VARIADIC (`<tools...>`): it greedily consumes every

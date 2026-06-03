@@ -11,6 +11,7 @@ import "@xyflow/react/dist/style.css";
 import * as dagre from "dagre";
 import type { Branch, StackNode } from "../lib/types";
 import { GraphNode, type GraphNodeData } from "./GraphNode";
+import { useThemePalette } from "../lib/theme";
 
 const NODE_W = 208;
 const NODE_H = 60;
@@ -27,6 +28,7 @@ export function StackGraph({
   selected: string | null;
   onSelect: (name: string) => void;
 }) {
+  const palette = useThemePalette();
   const { nodes, edges } = useMemo(() => {
     const data: GraphNodeData[] = [];
     const links: { source: string; target: string }[] = [];
@@ -62,10 +64,10 @@ export function StackGraph({
       source: l.source,
       target: l.target,
       type: "smoothstep",
-      style: { stroke: "#3f3f46" },
+      style: { stroke: palette.graphEdge },
     }));
     return { nodes, edges };
-  }, [roots, untracked, selected]);
+  }, [roots, untracked, selected, palette]);
 
   return (
     <div className="h-full w-full">
@@ -80,7 +82,7 @@ export function StackGraph({
         nodesConnectable={false}
         minZoom={0.2}
       >
-        <Background color="#27272a" gap={20} />
+        <Background color={palette.graphBg} gap={20} />
         <Controls showInteractive={false} />
       </ReactFlow>
     </div>

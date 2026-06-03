@@ -12,6 +12,7 @@ import "@xyflow/react/dist/style.css";
 import * as dagre from "dagre";
 import type { CommitNode } from "../lib/types";
 import { CommitNodeCard } from "./CommitNodeCard";
+import { useThemePalette } from "../lib/theme";
 
 const NODE_W = 224;
 const NODE_H = 52;
@@ -27,6 +28,7 @@ export function CommitGraph({
   onSelect: (sha: string) => void;
 }) {
   const rf = useRef<ReactFlowInstance | null>(null);
+  const palette = useThemePalette();
 
   const { nodes, edges } = useMemo(() => {
     const present = new Set(commits.map((c) => c.sha));
@@ -60,10 +62,10 @@ export function CommitGraph({
       source: l.source,
       target: l.target,
       type: "smoothstep",
-      style: { stroke: "#3f3f46" },
+      style: { stroke: palette.graphEdge },
     }));
     return { nodes, edges };
-  }, [commits, selected]);
+  }, [commits, selected, palette]);
 
   // Open zoomed on the most recent commits (readable), not fit-all-zoomed-out.
   const focusRecent = useCallback(
@@ -102,7 +104,7 @@ export function CommitGraph({
         nodesConnectable={false}
         minZoom={0.05}
       >
-        <Background color="#27272a" gap={20} />
+        <Background color={palette.graphBg} gap={20} />
         <Controls showInteractive={false} />
       </ReactFlow>
     </div>

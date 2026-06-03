@@ -1,7 +1,105 @@
 @import "tailwindcss";
 
+/* ─────────────────────────────────────────────────────────────────────────
+   Theme tokens
+
+   Classic = Tailwind's built-in defaults (this file leaves them untouched), so
+   the original appearance is preserved exactly. Modern re-points Tailwind v4's
+   design variables under :root[data-theme="modern"]; because every utility
+   class resolves through those variables, the whole UI re-skins automatically.
+   See src/lib/theme.tsx for the runtime switch.
+   ───────────────────────────────────────────────────────────────────────── */
+
 :root {
   color-scheme: dark;
+
+  /* App chrome (body) — variabilized so Modern can override it. */
+  --app-bg: #0a0a0a;
+  --app-fg: #e5e5e5;
+
+  /* Rendered-Markdown palette (Docs view) — Classic values. */
+  --md-text: #d4d4d4;
+  --md-heading: #f5f5f5;
+  --md-border: #262626;
+  --md-link: #818cf8;
+  --md-code-bg: #1e1e1e;
+  --md-code-border: #2a2a2a;
+  --md-pre-bg: #121212;
+  --md-pre-border: #262626;
+  --md-quote-border: #404040;
+  --md-quote-text: #a3a3a3;
+  --md-table-border: #2a2a2a;
+}
+
+/* ── Modern: refined dark · blue-ink surfaces · teal accent ───────────────── */
+:root[data-theme="modern"] {
+  /* Neutral ramp → cool blue-ink. The app uses `neutral` monotonically
+     (low index = dark surface, high index = light text), so remapping the
+     whole ramp re-skins every surface/border/text without touching markup. */
+  --color-neutral-50: #f4f6fa;
+  --color-neutral-100: #e8ecf3; /* headings / strong text */
+  --color-neutral-200: #d6dce7; /* primary text */
+  --color-neutral-300: #b4becf;
+  --color-neutral-400: #909cb2; /* secondary text */
+  --color-neutral-500: #66728a; /* muted text / icons */
+  --color-neutral-600: #3b4658; /* hover borders */
+  --color-neutral-700: #2e3749; /* borders, control outlines */
+  --color-neutral-800: #232a38; /* subtle borders, badges, raised hover */
+  --color-neutral-900: #131722; /* panels, sidebar, cards */
+  --color-neutral-950: #0b0d12; /* app background */
+
+  /* Accent ramp (indigo → teal). The app's accent is `indigo`; remapping the
+     ramp swaps every accent usage to teal with no component edits. */
+  --color-indigo-200: #99f6e4;
+  --color-indigo-300: #5eead4; /* accent text on dark */
+  --color-indigo-400: #2dd4bf; /* accent icons */
+  --color-indigo-500: #14b8a6; /* hover / borders / rings */
+  --color-indigo-600: #0d9488; /* primary filled buttons */
+  --color-indigo-700: #0f766e;
+  --color-indigo-800: #115e59; /* subtle rings */
+  --color-indigo-900: #134e4a; /* badge backgrounds */
+  --color-indigo-950: #042f2e; /* subtle selected backgrounds */
+
+  /* Semantic colors (emerald/amber/rose/sky/red/purple/green) are intentionally
+     left at Tailwind defaults — they keep their meaning and proven contrast on
+     the new ink background. Accent (teal) and success (emerald) stay distinct. */
+
+  /* A more refined, differentiated radius scale (avoids uniform rounding). */
+  --radius-sm: 0.3125rem; /* 5px  */
+  --radius-md: 0.4375rem; /* 7px  */
+  --radius-lg: 0.625rem; /* 10px */
+  --radius-xl: 0.875rem; /* 14px */
+  --radius-2xl: 1.125rem; /* 18px */
+
+  /* Layered shadows tuned for a dark surface — gives panels/modals real depth. */
+  --shadow-2xs: 0 1px 1px rgba(0, 0, 0, 0.4);
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.45);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.45), 0 1px 1px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 4px 10px -2px rgba(0, 0, 0, 0.5), 0 2px 4px -2px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 24px -6px rgba(0, 0, 0, 0.55), 0 2px 6px -2px rgba(0, 0, 0, 0.4);
+  --shadow-xl: 0 18px 40px -10px rgba(0, 0, 0, 0.6), 0 4px 10px -4px rgba(0, 0, 0, 0.45);
+  --shadow-2xl: 0 28px 60px -12px rgba(0, 0, 0, 0.72);
+
+  /* Crisper monospace (used for branch names, SHAs) when available. */
+  --font-mono: "Cascadia Code", "JetBrains Mono", ui-monospace, "SF Mono",
+    "Cascadia Mono", Menlo, Consolas, monospace;
+
+  /* App chrome */
+  --app-bg: #0b0d12;
+  --app-fg: #e8ecf3;
+
+  /* Rendered-Markdown palette — Modern */
+  --md-text: #c2cada;
+  --md-heading: #e8ecf3;
+  --md-border: #232a38;
+  --md-link: #5eead4;
+  --md-code-bg: #131722;
+  --md-code-border: #232a38;
+  --md-pre-bg: #0e121a;
+  --md-pre-border: #232a38;
+  --md-quote-border: #2e3749;
+  --md-quote-text: #909cb2;
+  --md-table-border: #232a38;
 }
 
 html,
@@ -12,35 +110,61 @@ body,
 
 body {
   margin: 0;
-  background-color: #0a0a0a;
-  color: #e5e5e5;
+  background-color: var(--app-bg);
+  color: var(--app-fg);
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
 }
 
-/* Minimal rendered-Markdown styling (dark) for the Docs view. */
+/* Modern typography polish: subtly tighter tracking + tabular figures so the
+   many numeric badges (ahead/behind, PR #, counts) align cleanly. Stylistic
+   features are no-ops on fonts that don't support them. */
+:root[data-theme="modern"] body {
+  letter-spacing: -0.006em;
+  font-feature-settings: "tnum" 1, "cv01" 1, "ss01" 1;
+}
+
+/* Refined thin scrollbars in Modern. */
+:root[data-theme="modern"] *::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+:root[data-theme="modern"] *::-webkit-scrollbar-thumb {
+  background-color: var(--color-neutral-700);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  border-radius: 9999px;
+}
+:root[data-theme="modern"] *::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-neutral-600);
+}
+:root[data-theme="modern"] *::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Minimal rendered-Markdown styling for the Docs view (theme-aware via vars). */
 .markdown-body {
   font-size: 14px;
   line-height: 1.65;
-  color: #d4d4d4;
+  color: var(--md-text);
 }
 .markdown-body h1,
 .markdown-body h2,
 .markdown-body h3 {
-  color: #f5f5f5;
+  color: var(--md-heading);
   font-weight: 600;
   line-height: 1.3;
   margin: 1.2em 0 0.5em;
 }
 .markdown-body h1 {
   font-size: 1.6em;
-  border-bottom: 1px solid #262626;
+  border-bottom: 1px solid var(--md-border);
   padding-bottom: 0.3em;
 }
 .markdown-body h2 {
   font-size: 1.3em;
-  border-bottom: 1px solid #262626;
+  border-bottom: 1px solid var(--md-border);
   padding-bottom: 0.2em;
 }
 .markdown-body h3 {
@@ -63,20 +187,20 @@ body {
   list-style: decimal;
 }
 .markdown-body a {
-  color: #818cf8;
+  color: var(--md-link);
   text-decoration: underline;
 }
 .markdown-body code {
-  background: #1e1e1e;
-  border: 1px solid #2a2a2a;
+  background: var(--md-code-bg);
+  border: 1px solid var(--md-code-border);
   border-radius: 4px;
   padding: 0.1em 0.35em;
   font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
   font-size: 0.88em;
 }
 .markdown-body pre {
-  background: #121212;
-  border: 1px solid #262626;
+  background: var(--md-pre-bg);
+  border: 1px solid var(--md-pre-border);
   border-radius: 8px;
   padding: 0.8em 1em;
   overflow-x: auto;
@@ -87,9 +211,9 @@ body {
   padding: 0;
 }
 .markdown-body blockquote {
-  border-left: 3px solid #404040;
+  border-left: 3px solid var(--md-quote-border);
   padding-left: 1em;
-  color: #a3a3a3;
+  color: var(--md-quote-text);
 }
 .markdown-body table {
   border-collapse: collapse;
@@ -97,7 +221,7 @@ body {
 }
 .markdown-body th,
 .markdown-body td {
-  border: 1px solid #2a2a2a;
+  border: 1px solid var(--md-table-border);
   padding: 0.4em 0.7em;
 }
 .markdown-body img {

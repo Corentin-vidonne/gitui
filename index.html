@@ -4,7 +4,21 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tauri + React + Typescript</title>
+    <title>gitui</title>
+    <script>
+      // Apply the saved theme before first paint to avoid a flash. Mirrors the
+      // logic in src/lib/theme.tsx (key "gitui.theme").
+      (function () {
+        try {
+          var t = localStorage.getItem("gitui.theme");
+          document.documentElement.setAttribute(
+            "data-theme",
+            t === "modern" ? "modern" : "classic"
+          );
+          document.documentElement.style.colorScheme = "dark";
+        } catch (e) {}
+      })();
+    </script>
   </head>
 
   <body>
