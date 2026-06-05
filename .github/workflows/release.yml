@@ -1,0 +1,78 @@
+# Build gitui installers for macOS (Apple Silicon + Intel), Linux and Windows.
+#
+# Triggers on a version tag (e.g. `git tag v0.1.0 && git push --tags`) or manually from the
+# Actions tab. Produces a *draft* GitHub Release with the per-platform bundles attached:
+#   - macOS:   .dmg / .app           (aarch64 + x86_64)
+#   - Linux:   .AppImage / .deb / .rpm
+#   - Windows: .msi / .exe (NSIS)
+# Review the draft, then publish it.
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  build:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest # Apple Silicon
+            args: --target aarch64-apple-darwin
+          - platform: macos-latest # Intel
+            args: --target x86_64-apple-darwin
+          - platform: ubuntu-22.04
+            args: ""
+          - platform: windows-latest
+            args: ""
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # Tauri v2 system libraries (Linux only).
+      - name: Install Linux dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          # Both macOS arches need their target installed; harmless elsewhere.
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - name: Cache Rust build
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: ./src-tauri -> target
+
+      - name: Install frontend dependencies
+        run: npm install
+
+      - name: Build & bundle
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: "gitui v__VERSION__"
+          releaseBody: "Téléchargez l'installateur correspondant à votre système ci-dessous."
+          releaseDraft: true
+          prerelease: false
+          args: ${{ matrix.args }}

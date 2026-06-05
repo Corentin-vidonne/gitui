@@ -30,4 +30,6 @@ serde_json = "1"
 toml = "0.8"
 portable-pty = "0.8"
 base64 = "0.22"
+# Tiny HTTP client (no TLS — localhost only) to query Ollama's /api/tags for model detection.
+ureq = { version = "2", default-features = false }
 

@@ -1,13 +1,13 @@
 use crate::error::{AppError, Result};
 use crate::model::{
-    Comment, IssueDetail, IssueSummary, PrDetail, PrFile, PrInfo, PrSummary, Review,
+    CheckRun, Comment, IssueDetail, IssueSummary, PrDetail, PrFile, PrInfo, PrSummary, Review,
 };
 use crate::proc;
 use std::collections::HashMap;
 use std::path::Path;
 
 /// Derive an overall CI state from gh's `statusCheckRollup` array.
-fn rollup_state(v: Option<&serde_json::Value>) -> Option<String> {
+pub(crate) fn rollup_state(v: Option<&serde_json::Value>) -> Option<String> {
     let arr = v?.as_array()?;
     if arr.is_empty() {
         return None;
@@ -206,6 +206,55 @@ pub fn set_pr_base(repo: &Path, number: u64, base: &str) -> Result<()> {
         return Err(AppError::new(format!("gh pr edit failed: {}", r.stderr.trim())));
     }
     Ok(())
+}
+
+/// Submit a review on a PR: `event` is "approve" | "request_changes" | "comment".
+pub fn pr_review(repo: &Path, number: u64, event: &str, body: &str) -> Result<()> {
+    let flag = match event {
+        "approve" => "--approve",
+        "request_changes" => "--request-changes",
+        "comment" => "--comment",
+        _ => return Err(AppError::new("invalid review event")),
+    };
+    let num = number.to_string();
+    let mut args: Vec<&str> = vec!["pr", "review", &num, flag];
+    if !body.trim().is_empty() {
+        args.push("--body");
+        args.push(body);
+    }
+    let r = proc::run("gh", args, Some(repo)).map_err(|e| AppError::new(e.to_string()))?;
+    if !r.success {
+        return Err(AppError::new(format!("gh pr review failed: {}", r.stderr.trim())));
+    }
+    Ok(())
+}
+
+/// The individual CI checks for a PR (`gh pr checks`). gh exits non-zero when checks
+/// fail or are pending, but still prints the JSON — so we parse stdout regardless.
+pub fn pr_checks(repo: &Path, number: u64) -> Result<Vec<CheckRun>> {
+    let num = number.to_string();
+    let r = proc::run(
+        "gh",
+        ["pr", "checks", &num, "--json", "name,state,bucket,link"],
+        Some(repo),
+    )
+    .map_err(|e| AppError::new(e.to_string()))?;
+    let out = r.stdout.trim();
+    if out.is_empty() {
+        return Ok(Vec::new()); // "no checks reported" → empty
+    }
+    let v: serde_json::Value =
+        serde_json::from_str(out).map_err(|e| AppError::new(format!("bad checks JSON: {e}")))?;
+    let arr = v.as_array().cloned().unwrap_or_default();
+    Ok(arr
+        .iter()
+        .map(|c| CheckRun {
+            name: c.get("name").and_then(|x| x.as_str()).unwrap_or("").to_string(),
+            bucket: c.get("bucket").and_then(|x| x.as_str()).unwrap_or("").to_string(),
+            state: c.get("state").and_then(|x| x.as_str()).unwrap_or("").to_string(),
+            link: c.get("link").and_then(|x| x.as_str()).unwrap_or("").to_string(),
+        })
+        .collect())
 }
 
 /// Head branch names of PRs that have been merged (to clean up landed branches).

@@ -1,13 +1,15 @@
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import type { CommitNode } from "../lib/types";
 
-export type CommitNodeData = { node: CommitNode; selected: boolean };
+export type CommitNodeData = { node: CommitNode; selected: boolean; dimmed?: boolean };
 
 export function CommitNodeCard({ data }: NodeProps) {
-  const { node, selected } = data as unknown as CommitNodeData;
+  const { node, selected, dimmed } = data as unknown as CommitNodeData;
   return (
     <div
-      className={`w-56 rounded-md border px-2.5 py-1.5 ${
+      className={`w-56 rounded-md border px-2.5 py-1.5 transition-opacity ${
+        dimmed ? "opacity-20" : ""
+      } ${
         selected
           ? "border-indigo-500 bg-indigo-950/60 ring-2 ring-indigo-500/40"
           : "border-neutral-700 bg-neutral-900 hover:border-neutral-600"

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Sparkles, Loader2 } from "lucide-react";
 import { Modal } from "./Modal";
 import { api, errorText } from "../lib/api";
 import type { RepoView, SubmitStepInfo } from "../lib/types";
@@ -17,6 +18,23 @@ export function SubmitDialog({
   const [draft, setDraft] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [bodies, setBodies] = useState<Record<string, string>>({});
+  const [generating, setGenerating] = useState<string | null>(null);
+  const [genError, setGenError] = useState<string | null>(null);
+
+  async function generate(branch: string) {
+    setGenerating(branch);
+    setGenError(null);
+    try {
+      const d = await api.generatePrDescription(repoPath, branch);
+      if (d.title) setTitles((t) => ({ ...t, [branch]: d.title }));
+      setBodies((b) => ({ ...b, [branch]: d.body }));
+    } catch (e) {
+      setGenError(errorText(e));
+    } finally {
+      setGenerating(null);
+    }
+  }
 
   useEffect(() => {
     let alive = true;
@@ -44,7 +62,7 @@ export function SubmitDialog({
     setSubmitting(true);
     setError(null);
     try {
-      const view = await api.submit(repoPath, null, draft, titles);
+      const view = await api.submit(repoPath, null, draft, titles, bodies);
       const parts = [];
       if (creates) parts.push(`${creates} PR created`);
       if (updates) parts.push(`${updates} updated`);
@@ -92,18 +110,51 @@ export function SubmitDialog({
                   </span>
                 </div>
                 {s.action === "create" && (
-                  <input
-                    value={titles[s.branch] ?? ""}
-                    onChange={(e) =>
-                      setTitles((t) => ({ ...t, [s.branch]: e.target.value }))
-                    }
-                    placeholder="PR title"
-                    className="mt-1.5 w-full rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-xs text-neutral-100 outline-none focus:border-indigo-600"
-                  />
+                  <div className="mt-1.5 space-y-1.5">
+                    <div className="flex gap-2">
+                      <input
+                        value={titles[s.branch] ?? ""}
+                        onChange={(e) =>
+                          setTitles((t) => ({ ...t, [s.branch]: e.target.value }))
+                        }
+                        placeholder="PR title"
+                        className="min-w-0 flex-1 rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-xs text-neutral-100 outline-none focus:border-indigo-600"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => generate(s.branch)}
+                        disabled={generating === s.branch}
+                        title="Générer titre + description (IA, depuis les commits de la branche)"
+                        className="inline-flex shrink-0 items-center gap-1 rounded border border-indigo-700 px-2 text-[11px] text-indigo-300 hover:bg-indigo-950/40 disabled:opacity-50"
+                      >
+                        {generating === s.branch ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <Sparkles className="h-3 w-3" />
+                        )}
+                        Décrire
+                      </button>
+                    </div>
+                    <textarea
+                      value={bodies[s.branch] ?? ""}
+                      onChange={(e) =>
+                        setBodies((b) => ({ ...b, [s.branch]: e.target.value }))
+                      }
+                      rows={3}
+                      placeholder="Description de la PR (Markdown, optionnel)"
+                      className="w-full resize-y rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-xs text-neutral-300 outline-none focus:border-indigo-600"
+                    />
+                  </div>
                 )}
               </div>
             ))}
           </div>
+
+          {genError && (
+            <div className="rounded-md border border-red-900 bg-red-950/40 px-3 py-2 text-xs text-red-300">
+              {genError}
+            </div>
+          )}
 
           <label className="flex items-center gap-2 text-xs text-neutral-300">
             <input

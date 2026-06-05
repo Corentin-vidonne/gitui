@@ -1,7 +1,7 @@
 use crate::error::{AppError, Result};
 use crate::model::{
-    Branch, CommitDetail, CommitInfo, CommitNode, ConflictState, ConflictSuggestion, PrReview,
-    RepoView, StackNode, SubmitStepInfo,
+    Branch, CheckRun, CommitDetail, CommitInfo, CommitNode, ConflictState, ConflictSuggestion,
+    PrDescription, PrReview, RepoView, StackNode, StashEntry, StashFile, SubmitStepInfo,
 };
 use crate::{assist, git, github, links, meta, proc, stack};
 use serde::Serialize;
@@ -9,6 +9,8 @@ use std::collections::HashMap;
 use std::path::Path;
 
 /// Environment health: are `git` and `gh` available, and is `gh` authenticated?
+/// (Claude Code is intentionally *not* probed here — it's checked only when an AI
+/// feature is used, via `assist::ensure_claude_available`.)
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Health {
@@ -48,6 +50,93 @@ pub fn health() -> Health {
         gh_authenticated,
         gh_account,
     }
+}
+
+/// Select the engine behind the `claude` CLI: `"anthropic"` (cloud, the user's own login)
+/// or `"ollama"` (local models). Called by the frontend on startup and on every settings
+/// change so the spawn funnels pick the right env vars.
+#[tauri::command]
+pub fn set_ai_backend(
+    backend: String,
+    ollama_host: String,
+    ollama_model: String,
+    anthropic_model: String,
+) {
+    assist::set_ai_config(&backend, ollama_host, ollama_model, anthropic_model);
+}
+
+/// List Ollama models for the picker. Two sources, merged & de-duplicated:
+///   1. `~/.ollama/config.json` → `integrations.claude.models` — what `ollama launch
+///      claude` uses, **including cloud models** (`*:cloud`) that `/api/tags` never lists.
+///   2. `GET <host>/api/tags` — locally pulled models.
+/// Done from Rust (no browser CORS) so detection works in the packaged app too.
+#[tauri::command]
+pub async fn ollama_models(host: String) -> Result<Vec<String>> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let mut names: Vec<String> = Vec::new();
+
+        // 1) Models configured for the Claude Code integration (covers cloud models).
+        if let Some(home) = std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE")) {
+            let cfg = Path::new(&home).join(".ollama").join("config.json");
+            if let Ok(text) = std::fs::read_to_string(&cfg) {
+                if let Ok(json) = serde_json::from_str::<serde_json::Value>(&text) {
+                    if let Some(arr) = json
+                        .pointer("/integrations/claude/models")
+                        .and_then(|m| m.as_array())
+                    {
+                        names.extend(arr.iter().filter_map(|m| m.as_str().map(String::from)));
+                    }
+                }
+            }
+        }
+
+        // 2) Locally pulled models from the running server.
+        let base = host.trim().trim_end_matches('/');
+        let base = if base.is_empty() { "http://localhost:11434" } else { base };
+        let url = format!("{base}/api/tags");
+        let agent = ureq::AgentBuilder::new()
+            .timeout_connect(std::time::Duration::from_secs(2))
+            .timeout_read(std::time::Duration::from_secs(4))
+            .build();
+        let tags: Result<Vec<String>> = agent
+            .get(&url)
+            .call()
+            .map_err(|e| {
+                AppError::new(format!("Ollama injoignable sur {base} — est-il lancé ? ({e})"))
+            })
+            .and_then(|r| r.into_string().map_err(|e| AppError::new(e.to_string())))
+            .and_then(|body| {
+                serde_json::from_str::<serde_json::Value>(&body)
+                    .map_err(|e| AppError::new(e.to_string()))
+            })
+            .map(|json| {
+                json.get("models")
+                    .and_then(|m| m.as_array())
+                    .map(|arr| {
+                        arr.iter()
+                            .filter_map(|m| m.get("name").and_then(|n| n.as_str()).map(String::from))
+                            .collect::<Vec<_>>()
+                    })
+                    .unwrap_or_default()
+            });
+
+        match tags {
+            Ok(local) => names.extend(local),
+            // Server unreachable is fine if the config already gave us (cloud) models.
+            Err(e) => {
+                if names.is_empty() {
+                    return Err(e);
+                }
+            }
+        }
+
+        // De-duplicate, preserving order (config/cloud models first).
+        let mut seen = std::collections::HashSet::new();
+        names.retain(|n| seen.insert(n.clone()));
+        Ok(names)
+    })
+    .await
+    .map_err(|e| AppError::new(e.to_string()))?
 }
 
 /// Build the inter-repo dependency graph across the given repo paths.
@@ -223,6 +312,7 @@ pub fn restack(path: String, from: Option<String>) -> Result<RepoView> {
     if git::is_dirty(repo) {
         return Err(AppError::new("Commit or stash your changes before restacking"));
     }
+    crate::undo::global().push(repo, "restack");
     stack::run(repo, from.as_deref())?;
     build_view(repo)
 }
@@ -257,6 +347,7 @@ pub fn submit(
     from: Option<String>,
     draft: bool,
     titles: HashMap<String, String>,
+    bodies: HashMap<String, String>,
 ) -> Result<RepoView> {
     let root = git::repo_root(Path::new(&path))?;
     let repo = Path::new(&root);
@@ -293,7 +384,13 @@ pub fn submit(
                     .filter(|t| !t.is_empty())
                     .or_else(|| git::commit_subject(repo, &step.branch))
                     .unwrap_or_else(|| step.branch.clone());
-                let body = format!("Stacked PR — base `{}`. Managed by gitui.", step.base);
+                let body = bodies
+                    .get(&step.branch)
+                    .map(|b| b.trim().to_string())
+                    .filter(|b| !b.is_empty())
+                    .unwrap_or_else(|| {
+                        format!("Stacked PR — base `{}`. Managed by gitui.", step.base)
+                    });
                 let created =
                     github::create_pr(repo, &step.branch, &step.base, &title, &body, draft)?;
                 meta::set_pr(repo, &step.branch, created.number)?;
@@ -363,6 +460,7 @@ pub fn sync(path: String) -> Result<RepoView> {
         return Err(AppError::new("Commit or stash your changes before syncing"));
     }
 
+    crate::undo::global().push(repo, "sync");
     git::fetch(repo)?;
 
     let raw = git::local_branches(repo)?;
@@ -378,6 +476,179 @@ pub fn sync(path: String) -> Result<RepoView> {
 
     let _ = stack::run(repo, None)?; // may pause on conflict; surfaced by build_view
     build_view(repo)
+}
+
+/// Undo the last in-app history-rewriting command (restack / sync / commit edit) by
+/// restoring the branch tips snapshotted just before it ran.
+#[tauri::command]
+pub fn undo(path: String) -> Result<RepoView> {
+    let root = git::repo_root(Path::new(&path))?;
+    let repo = Path::new(&root);
+    if git::rebase_in_progress(repo) {
+        return Err(AppError::new("Finish the in-progress restack first"));
+    }
+    let snap = crate::undo::global()
+        .pop(repo)
+        .ok_or_else(|| AppError::new("Nothing to undo"))?;
+    crate::undo::restore(repo, &snap)?;
+    build_view(repo)
+}
+
+/// Label of what `undo` would restore next (e.g. "restack"), or null if nothing.
+#[tauri::command]
+pub fn undo_peek(path: String) -> Result<Option<String>> {
+    let root = git::repo_root(Path::new(&path))?;
+    Ok(crate::undo::global().peek_label(Path::new(&root)))
+}
+
+// ---- Stashes ----
+
+/// Parse a `git stash` subject ("On <branch>: <msg>" / "WIP on <branch>: …") into
+/// (branch, message).
+fn parse_stash_subject(subject: &str) -> (String, String) {
+    let (head, message) = match subject.split_once(": ") {
+        Some((h, m)) => (h, m.to_string()),
+        None => (subject, String::new()),
+    };
+    let branch = head
+        .trim_start_matches("WIP on ")
+        .trim_start_matches("On ")
+        .trim_start_matches("on ")
+        .trim()
+        .to_string();
+    (branch, message)
+}
+
+/// The files inside a stash (including untracked when present).
+fn stash_files(repo: &Path, ref_name: &str) -> Vec<StashFile> {
+    let raw = git::git(
+        repo,
+        &["stash", "show", "--include-untracked", "--name-status", ref_name],
+    )
+    .or_else(|_| git::git(repo, &["stash", "show", "--name-status", ref_name]))
+    .unwrap_or_default();
+    raw.lines()
+        .filter_map(|l| {
+            let mut it = l.split('\t');
+            let status = it.next()?.trim().to_string();
+            let path = it.last()?.trim().to_string(); // `.last()` => new name on renames
+            if status.is_empty() || path.is_empty() {
+                None
+            } else {
+                Some(StashFile { status, path })
+            }
+        })
+        .collect()
+}
+
+fn build_stashes(repo: &Path) -> Result<Vec<StashEntry>> {
+    let raw = git::git(repo, &["stash", "list", "--format=%gd%x1f%gs%x1f%cr"])?;
+    let mut out = Vec::new();
+    for (i, line) in raw.lines().enumerate() {
+        if line.trim().is_empty() {
+            continue;
+        }
+        let mut parts = line.split('\u{1f}');
+        let ref_name = parts.next().unwrap_or("").to_string();
+        let subject = parts.next().unwrap_or("");
+        let date = parts.next().unwrap_or("").to_string();
+        if ref_name.is_empty() {
+            continue;
+        }
+        let (branch, message) = parse_stash_subject(subject);
+        let files = stash_files(repo, &ref_name);
+        out.push(StashEntry {
+            index: i,
+            ref_name,
+            message,
+            branch,
+            date,
+            files,
+        });
+    }
+    Ok(out)
+}
+
+/// Reject anything that isn't a literal `stash@{N}` reference.
+fn valid_stash_ref(r: &str) -> Result<()> {
+    let ok = r.starts_with("stash@{")
+        && r.ends_with('}')
+        && r.len() > "stash@{}".len()
+        && r["stash@{".len()..r.len() - 1]
+            .chars()
+            .all(|c| c.is_ascii_digit());
+    if ok {
+        Ok(())
+    } else {
+        Err(AppError::new("invalid stash ref"))
+    }
+}
+
+/// List stashes with the files each one contains.
+#[tauri::command]
+pub fn list_stashes(path: String) -> Result<Vec<StashEntry>> {
+    let root = git::repo_root(Path::new(&path))?;
+    build_stashes(Path::new(&root))
+}
+
+/// Cheap count of stashes (for the toolbar badge) — one `git stash list`, no file detail.
+#[tauri::command]
+pub fn stash_count(path: String) -> Result<usize> {
+    let root = git::repo_root(Path::new(&path))?;
+    let raw = git::git(Path::new(&root), &["stash", "list"])?;
+    Ok(raw.lines().filter(|l| !l.trim().is_empty()).count())
+}
+
+/// Stash the current changes (optionally with a message and the untracked files).
+#[tauri::command]
+pub fn stash_push(
+    path: String,
+    message: Option<String>,
+    include_untracked: bool,
+) -> Result<Vec<StashEntry>> {
+    let root = git::repo_root(Path::new(&path))?;
+    let repo = Path::new(&root);
+    let mut args: Vec<String> = vec!["stash".into(), "push".into()];
+    if include_untracked {
+        args.push("--include-untracked".into());
+    }
+    if let Some(m) = message.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
+        args.push("-m".into());
+        args.push(m.to_string());
+    }
+    let argv: Vec<&str> = args.iter().map(String::as_str).collect();
+    git::git(repo, &argv)?;
+    build_stashes(repo)
+}
+
+/// Apply a stash without removing it.
+#[tauri::command]
+pub fn stash_apply(path: String, ref_name: String) -> Result<Vec<StashEntry>> {
+    let root = git::repo_root(Path::new(&path))?;
+    let repo = Path::new(&root);
+    valid_stash_ref(&ref_name)?;
+    git::git(repo, &["stash", "apply", &ref_name])?;
+    build_stashes(repo)
+}
+
+/// Apply a stash and drop it if it applied cleanly.
+#[tauri::command]
+pub fn stash_pop(path: String, ref_name: String) -> Result<Vec<StashEntry>> {
+    let root = git::repo_root(Path::new(&path))?;
+    let repo = Path::new(&root);
+    valid_stash_ref(&ref_name)?;
+    git::git(repo, &["stash", "pop", &ref_name])?;
+    build_stashes(repo)
+}
+
+/// Delete a stash.
+#[tauri::command]
+pub fn stash_drop(path: String, ref_name: String) -> Result<Vec<StashEntry>> {
+    let root = git::repo_root(Path::new(&path))?;
+    let repo = Path::new(&root);
+    valid_stash_ref(&ref_name)?;
+    git::git(repo, &["stash", "drop", &ref_name])?;
+    build_stashes(repo)
 }
 
 /// Check out a branch (switch the current branch).
@@ -507,6 +778,7 @@ pub fn reword_commit(
         .map(|s| format!("{} {}", if *s == full { "reword" } else { "pick" }, s))
         .collect::<Vec<_>>()
         .join("\n");
+    crate::undo::global().push(repo, "reword commit");
     apply_edit(repo, &base, &branch, &todo, Some(&message))
 }
 
@@ -527,6 +799,7 @@ pub fn drop_commit(path: String, branch: String, sha: String) -> Result<RepoView
         .map(|s| format!("pick {s}"))
         .collect::<Vec<_>>()
         .join("\n");
+    crate::undo::global().push(repo, "drop commit");
     apply_edit(repo, &base, &branch, &todo, None)
 }
 
@@ -565,6 +838,7 @@ pub fn move_commit(
         .map(|s| format!("pick {s}"))
         .collect::<Vec<_>>()
         .join("\n");
+    crate::undo::global().push(repo, "move commit");
     apply_edit(repo, &base, &branch, &todo, None)
 }
 
@@ -584,7 +858,43 @@ pub fn squash_commit(path: String, branch: String, sha: String) -> Result<RepoVi
         .map(|s| format!("{} {}", if *s == full { "fixup" } else { "pick" }, s))
         .collect::<Vec<_>>()
         .join("\n");
+    crate::undo::global().push(repo, "squash commit");
     apply_edit(repo, &base, &branch, &todo, None)
+}
+
+/// Cherry-pick a commit onto `target`, then return to the original branch. On conflict
+/// the cherry-pick is aborted and the original branch restored (no half-applied state).
+#[tauri::command]
+pub fn cherry_pick(path: String, sha: String, target: String) -> Result<RepoView> {
+    let root = git::repo_root(Path::new(&path))?;
+    let repo = Path::new(&root);
+    if git::rebase_in_progress(repo) {
+        return Err(AppError::new("Finish the in-progress restack first"));
+    }
+    if git::is_dirty(repo) {
+        return Err(AppError::new("Commit or stash your changes before cherry-picking"));
+    }
+    if !git::branch_exists(repo, &target) {
+        return Err(AppError::new(format!("Branch '{}' does not exist", target)));
+    }
+    let original = git::current_branch(repo);
+    crate::undo::global().push(repo, "cherry-pick");
+    git::checkout(repo, &target)?;
+    let result = git::git(repo, &["cherry-pick", &sha]);
+    // Whatever happens, go back to the branch the user was on.
+    if let Some(orig) = &original {
+        if result.is_err() {
+            let _ = git::git(repo, &["cherry-pick", "--abort"]);
+        }
+        let _ = git::checkout(repo, orig);
+    }
+    match result {
+        Ok(_) => build_view(repo),
+        Err(e) => Err(AppError::new(format!(
+            "Cherry-pick sur '{}' échoué (conflits ?). Annulé. {}",
+            target, e
+        ))),
+    }
 }
 
 /// The commit DAG with branch tips labeled. `branches` (when non-empty) restricts the
@@ -671,6 +981,27 @@ pub fn pr_detail(path: String, number: u64) -> Result<crate::model::PrDetail> {
     github::pr_detail(Path::new(&root), number)
 }
 
+/// Submit a human review on a PR (approve / request_changes / comment).
+#[tauri::command]
+pub fn submit_pr_review(
+    path: String,
+    number: u64,
+    event: String,
+    body: String,
+) -> Result<crate::model::PrDetail> {
+    let root = git::repo_root(Path::new(&path))?;
+    let repo = Path::new(&root);
+    github::pr_review(repo, number, &event, &body)?;
+    github::pr_detail(repo, number)
+}
+
+/// The individual CI checks for a PR (name, bucket, link to logs).
+#[tauri::command]
+pub fn pr_checks(path: String, number: u64) -> Result<Vec<CheckRun>> {
+    let root = git::repo_root(Path::new(&path))?;
+    github::pr_checks(Path::new(&root), number)
+}
+
 /// AI review of a PR: feed the unified diff to `claude` and return structured findings.
 /// Async (off the main thread via `spawn_blocking`) — the model call takes tens of seconds.
 #[tauri::command]
@@ -683,6 +1014,113 @@ pub async fn review_pr(path: String, number: u64) -> Result<PrReview> {
         let json = assist::extract_json(&out)?;
         serde_json::from_str::<PrReview>(json)
             .map_err(|e| AppError::new(format!("bad review JSON: {e}")))
+    })
+    .await
+    .map_err(|e| AppError::new(e.to_string()))?
+}
+
+/// Generate a commit message for `sha` via `claude`. `mode` is "simple" (≤5 words) or
+/// "complet" (subject + body); the message starts with a conventional-commit type.
+#[tauri::command]
+pub async fn generate_commit_message(path: String, sha: String, mode: String) -> Result<String> {
+    tauri::async_runtime::spawn_blocking(move || -> Result<String> {
+        let root = git::repo_root(Path::new(&path))?;
+        let repo = Path::new(&root);
+        let out =
+            assist::run_claude_headless(repo, &assist::commit_message_prompt(&sha, &mode))?;
+        let json = assist::extract_json(&out)?;
+        #[derive(serde::Deserialize)]
+        struct Msg {
+            #[serde(alias = "commit_message", alias = "text")]
+            message: String,
+        }
+        let m: Msg = serde_json::from_str(json)
+            .map_err(|e| AppError::new(format!("bad message JSON: {e}")))?;
+        Ok(m.message.trim().to_string())
+    })
+    .await
+    .map_err(|e| AppError::new(e.to_string()))?
+}
+
+/// AI review of a single commit: structured findings (same shape as `review_pr`).
+#[tauri::command]
+pub async fn review_commit(path: String, sha: String) -> Result<PrReview> {
+    tauri::async_runtime::spawn_blocking(move || -> Result<PrReview> {
+        let root = git::repo_root(Path::new(&path))?;
+        let repo = Path::new(&root);
+        let detail = git::commit_detail(repo, &sha)?;
+        // Cap the diff (char-boundary safe) to keep the prompt bounded.
+        let diff: String = detail.diff.chars().take(60_000).collect();
+        let prompt = assist::commit_review_prompt(&sha, &detail.message, &diff);
+        let out = assist::run_claude_headless(repo, &prompt)?;
+        let json = assist::extract_json(&out)?;
+        serde_json::from_str::<PrReview>(json)
+            .map_err(|e| AppError::new(format!("bad review JSON: {e}")))
+    })
+    .await
+    .map_err(|e| AppError::new(e.to_string()))?
+}
+
+/// Suggest a branch name from the current changes (or the last commit when clean).
+#[tauri::command]
+pub async fn suggest_branch_name(path: String) -> Result<String> {
+    tauri::async_runtime::spawn_blocking(move || -> Result<String> {
+        let root = git::repo_root(Path::new(&path))?;
+        let repo = Path::new(&root);
+        let stat = git::git(repo, &["diff", "HEAD", "--stat"]).unwrap_or_default();
+        let context = if stat.trim().is_empty() {
+            let subj = git::git(repo, &["log", "-1", "--format=%s"]).unwrap_or_default();
+            format!("Aucun changement non commité. Dernier commit : {}", subj.trim())
+        } else {
+            format!("Changements en cours :\n{}", stat.trim())
+        };
+        let out = assist::run_claude_headless(repo, &assist::branch_name_prompt(&context))?;
+        let json = assist::extract_json(&out)?;
+        #[derive(serde::Deserialize)]
+        struct N {
+            name: String,
+        }
+        let n: N = serde_json::from_str(json)
+            .map_err(|e| AppError::new(format!("bad name JSON: {e}")))?;
+        Ok(n.name.trim().to_string())
+    })
+    .await
+    .map_err(|e| AppError::new(e.to_string()))?
+}
+
+/// Draft a PR title + Markdown body for a branch from its commits/diff vs its base.
+#[tauri::command]
+pub async fn generate_pr_description(path: String, branch: String) -> Result<PrDescription> {
+    tauri::async_runtime::spawn_blocking(move || -> Result<PrDescription> {
+        let root = git::repo_root(Path::new(&path))?;
+        let repo = Path::new(&root);
+        let metas = meta::all(repo);
+        let raw = git::local_branches(repo)?;
+        let trunk = git::trunk(repo, &raw);
+        let base = metas
+            .get(&branch)
+            .and_then(|m| m.parent.clone())
+            .unwrap_or(trunk);
+        let range = format!("{base}..{branch}");
+        let commits = git::git(repo, &["log", "--format=- %s", &range]).unwrap_or_default();
+        let stat = git::git(repo, &["diff", "--stat", &range]).unwrap_or_default();
+        let prompt =
+            assist::pr_description_prompt(&branch, &base, commits.trim(), stat.trim());
+        let out = assist::run_claude_headless(repo, &prompt)?;
+        let json = assist::extract_json(&out)?;
+        #[derive(serde::Deserialize)]
+        struct D {
+            #[serde(default)]
+            title: String,
+            #[serde(default)]
+            body: String,
+        }
+        let d: D = serde_json::from_str(json)
+            .map_err(|e| AppError::new(format!("bad description JSON: {e}")))?;
+        Ok(PrDescription {
+            title: d.title.trim().to_string(),
+            body: d.body.trim().to_string(),
+        })
     })
     .await
     .map_err(|e| AppError::new(e.to_string()))?
@@ -800,6 +1238,46 @@ pub fn mark_updates_seen(app: tauri::AppHandle, path: String) -> Result<()> {
     let root = git::repo_root(Path::new(&path))?;
     crate::notify::mark_seen(&dir, &root, Path::new(&root));
     Ok(())
+}
+
+/// Summarize a repo's pending updates into a short French digest via `claude`.
+/// Items are passed in (already fetched by the frontend) so no extra git/gh work is done.
+#[tauri::command]
+pub async fn summarize_updates(
+    path: String,
+    items: Vec<crate::notify::UpdateItem>,
+) -> Result<String> {
+    if items.is_empty() {
+        return Ok(String::new());
+    }
+    tauri::async_runtime::spawn_blocking(move || -> Result<String> {
+        let root = git::repo_root(Path::new(&path))?;
+        let repo = Path::new(&root);
+        let lines: Vec<String> = items
+            .iter()
+            .map(|i| {
+                let label = match i.kind.as_str() {
+                    "pr" => format!("PR #{}", i.number.unwrap_or(0)),
+                    "issue" => format!("Issue #{}", i.number.unwrap_or(0)),
+                    "trunk" => "Tronc".to_string(),
+                    other => other.to_string(),
+                };
+                format!("- [{}] {} — {}", label, i.title, i.detail)
+            })
+            .collect();
+        let prompt = format!(
+            "Voici les nouveautés d'un dépôt git depuis la dernière visite de l'utilisateur :\n{}\n\n\
+             Rédige un DIGEST en français, 2 à 4 lignes MAXIMUM, factuel et utile. Regroupe par thème \
+             si pertinent (PRs, issues, tronc) et mets en avant ce qui demande une action (CI en échec, \
+             review demandée, PR mergée). Réponds DIRECTEMENT par le digest — pas d'introduction, pas de \
+             titres Markdown, pas de bloc de code — et N'EXPLORE PAS le dépôt.",
+            lines.join("\n")
+        );
+        let out = assist::run_claude_headless(repo, &prompt)?;
+        Ok(out.trim().to_string())
+    })
+    .await
+    .map_err(|e| AppError::new(e.to_string()))?
 }
 
 /// Open the repo's root folder in VS Code (`code <repo>`). On Windows `code` is a
@@ -1219,6 +1697,27 @@ mod tests {
         let r: ConflictRaw = serde_json::from_str(json).unwrap();
         assert_eq!(r.explanation, "e");
         assert_eq!(r.resolution, "final content");
+    }
+
+    #[test]
+    fn parse_stash_subject_extracts_branch_and_message() {
+        assert_eq!(
+            parse_stash_subject("On main: mon travail"),
+            ("main".to_string(), "mon travail".to_string())
+        );
+        assert_eq!(
+            parse_stash_subject("WIP on feat/x: abc123 sujet"),
+            ("feat/x".to_string(), "abc123 sujet".to_string())
+        );
+    }
+
+    #[test]
+    fn valid_stash_ref_rejects_non_stash_refs() {
+        assert!(valid_stash_ref("stash@{0}").is_ok());
+        assert!(valid_stash_ref("stash@{12}").is_ok());
+        assert!(valid_stash_ref("stash@{}").is_err());
+        assert!(valid_stash_ref("HEAD").is_err());
+        assert!(valid_stash_ref("stash@{0}; rm -rf /").is_err());
     }
 
     // End-to-end: hits the REAL claude CLI + gh against the local sandbox PR #3.
@@ -1650,8 +2149,14 @@ mod tests {
                 return;
             }
         };
-        let view =
-            submit(path, None, false, std::collections::HashMap::new()).expect("submit should succeed");
+        let view = submit(
+            path,
+            None,
+            false,
+            std::collections::HashMap::new(),
+            std::collections::HashMap::new(),
+        )
+        .expect("submit should succeed");
         assert!(view.prs_available, "PRs should be available after submit");
 
         fn collect(n: &StackNode, out: &mut Vec<Branch>) {

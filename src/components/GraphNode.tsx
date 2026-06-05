@@ -1,6 +1,7 @@
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { GitBranch } from "lucide-react";
 import type { Branch } from "../lib/types";
+import { reviewMark } from "./PrBadge";
 
 export type GraphNodeData = { branch: Branch; selected: boolean };
 
@@ -10,9 +11,16 @@ function prStateClass(state: string): string {
   return "text-emerald-300";
 }
 
+function ciColor(c: string): string {
+  if (c === "SUCCESS") return "text-emerald-400";
+  if (c === "FAILURE") return "text-red-400";
+  return "text-amber-400";
+}
+
 export function GraphNode({ data }: NodeProps) {
   const { branch: b, selected } = data as unknown as GraphNodeData;
   const untracked = !b.isTrunk && !b.tracked;
+  const rev = b.pr ? reviewMark(b.pr.reviewDecision) : null;
   return (
     <div
       className={`w-52 rounded-lg border px-3 py-2 shadow-sm ${
@@ -54,7 +62,19 @@ export function GraphNode({ data }: NodeProps) {
           </span>
         )}
         {b.pr && (
-          <span className={`ml-auto font-mono ${prStateClass(b.pr.state)}`}>#{b.pr.number}</span>
+          <span className="ml-auto flex items-center gap-0.5 font-mono">
+            {b.pr.checks && (
+              <span className={ciColor(b.pr.checks)} title={`CI ${b.pr.checks}`}>
+                ●
+              </span>
+            )}
+            <span className={prStateClass(b.pr.state)}>#{b.pr.number}</span>
+            {rev && (
+              <span className={`font-semibold ${rev.cls}`} title={b.pr.reviewDecision ?? ""}>
+                {rev.ch}
+              </span>
+            )}
+          </span>
         )}
       </div>
       <Handle

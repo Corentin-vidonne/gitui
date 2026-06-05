@@ -1,7 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
-import { X, Sparkles, ExternalLink, GitPullRequest, ShieldCheck, Loader2 } from "lucide-react";
+import {
+  X,
+  Sparkles,
+  ExternalLink,
+  GitPullRequest,
+  GitMerge,
+  ShieldCheck,
+  Loader2,
+  Check,
+  MessageSquare,
+} from "lucide-react";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import type { PrDetail, PrReview } from "../lib/types";
+import type { CheckRun, PrDetail, PrReview } from "../lib/types";
 import { api, errorText } from "../lib/api";
 import { useTheme } from "../lib/theme";
 import { DiffView, splitDiffByFile } from "./DiffView";
@@ -24,14 +34,25 @@ function sevBadge(sev: string): string {
   return "border-neutral-700 bg-neutral-800 text-neutral-300";
 }
 
+/** Dot color for a `gh pr checks` bucket. */
+function bucketColor(b: string): string {
+  if (b === "pass") return "bg-emerald-400";
+  if (b === "fail") return "bg-red-400";
+  if (b === "pending") return "bg-amber-400";
+  return "bg-neutral-500";
+}
+
 export function PrDetailPanel({
   repoPath,
   number,
+  aiName,
   onClose,
   onAnalyze,
 }: {
   repoPath: string;
   number: number;
+  /** Display name of the active AI engine (Ollama model, or "Claude"). */
+  aiName: string;
   onClose: () => void;
   onAnalyze: (number: number, mode: string) => void;
 }) {
@@ -42,6 +63,12 @@ export function PrDetailPanel({
   const [review, setReview] = useState<PrReview | null>(null);
   const [reviewing, setReviewing] = useState(false);
   const [reviewError, setReviewError] = useState<string | null>(null);
+  const [reviewBody, setReviewBody] = useState("");
+  const [submittingReview, setSubmittingReview] = useState<string | null>(null);
+  const [reviewActionError, setReviewActionError] = useState<string | null>(null);
+  const [checks, setChecks] = useState<CheckRun[] | null>(null);
+  const [loadingChecks, setLoadingChecks] = useState(false);
+  const [checksError, setChecksError] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -51,6 +78,10 @@ export function PrDetailPanel({
     setReview(null);
     setReviewError(null);
     setReviewing(false);
+    setReviewBody("");
+    setReviewActionError(null);
+    setChecks(null);
+    setChecksError(null);
     api
       .prDetail(repoPath, number)
       .then((d) => alive && setPr(d))
@@ -70,6 +101,31 @@ export function PrDetailPanel({
       setReviewError(errorText(e));
     } finally {
       setReviewing(false);
+    }
+  }
+
+  async function doReview(event: "approve" | "request_changes" | "comment") {
+    setSubmittingReview(event);
+    setReviewActionError(null);
+    try {
+      setPr(await api.submitPrReview(repoPath, number, event, reviewBody.trim()));
+      setReviewBody("");
+    } catch (e) {
+      setReviewActionError(errorText(e));
+    } finally {
+      setSubmittingReview(null);
+    }
+  }
+
+  async function loadChecks() {
+    setLoadingChecks(true);
+    setChecksError(null);
+    try {
+      setChecks(await api.prChecks(repoPath, number));
+    } catch (e) {
+      setChecksError(errorText(e));
+    } finally {
+      setLoadingChecks(false);
     }
   }
 
@@ -136,6 +192,15 @@ export function PrDetailPanel({
                 )}{" "}
                 AI Review
               </button>
+              {pr.state === "OPEN" && (
+                <button
+                  onClick={() => onAnalyze(number, "merge")}
+                  title={`Assistant de merge (${aiName}) pour cette PR : vérifs CI/review, stratégie, merge, puis re-sync de la pile`}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-emerald-700 px-2.5 py-1.5 text-xs font-medium text-emerald-300 hover:bg-emerald-950/40"
+                >
+                  <GitMerge className="h-3.5 w-3.5" /> Aide au merge
+                </button>
+              )}
               <button
                 onClick={() => openUrl(pr.url)}
                 className="inline-flex items-center gap-1.5 rounded-md border border-neutral-700 px-2.5 py-1.5 text-xs text-neutral-300 hover:bg-neutral-800"
@@ -220,6 +285,111 @@ export function PrDetailPanel({
                 {pr.reviewDecision && <span> · {pr.reviewDecision}</span>}
                 {pr.checks && <span className={ciColor(pr.checks)}> · CI {pr.checks}</span>}
               </div>
+            </div>
+
+            {/* Human review */}
+            {pr.state === "OPEN" && (
+              <div className="space-y-2">
+                <h4 className="text-xs uppercase tracking-wider text-neutral-500">Review</h4>
+                <textarea
+                  value={reviewBody}
+                  onChange={(e) => setReviewBody(e.target.value)}
+                  rows={2}
+                  placeholder="Commentaire (requis pour « changements » / « commenter »)"
+                  className="w-full resize-y rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-100 outline-none focus:border-indigo-600"
+                />
+                {reviewActionError && (
+                  <div className="rounded-md border border-red-900 bg-red-950/40 px-2 py-1 text-[11px] text-red-300">
+                    {reviewActionError}
+                  </div>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => doReview("approve")}
+                    disabled={!!submittingReview}
+                    className="inline-flex items-center gap-1.5 rounded-md border border-emerald-700 px-2.5 py-1 text-xs font-medium text-emerald-300 hover:bg-emerald-950/40 disabled:opacity-50"
+                  >
+                    {submittingReview === "approve" ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Check className="h-3.5 w-3.5" />
+                    )}
+                    Approuver
+                  </button>
+                  <button
+                    onClick={() => doReview("request_changes")}
+                    disabled={!!submittingReview || !reviewBody.trim()}
+                    title={!reviewBody.trim() ? "Ajoute un commentaire" : ""}
+                    className="inline-flex items-center gap-1.5 rounded-md border border-amber-700 px-2.5 py-1 text-xs font-medium text-amber-300 hover:bg-amber-950/40 disabled:opacity-50"
+                  >
+                    {submittingReview === "request_changes" ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <X className="h-3.5 w-3.5" />
+                    )}
+                    Changements
+                  </button>
+                  <button
+                    onClick={() => doReview("comment")}
+                    disabled={!!submittingReview || !reviewBody.trim()}
+                    title={!reviewBody.trim() ? "Ajoute un commentaire" : ""}
+                    className="inline-flex items-center gap-1.5 rounded-md border border-neutral-700 px-2.5 py-1 text-xs font-medium text-neutral-300 hover:bg-neutral-800 disabled:opacity-50"
+                  >
+                    {submittingReview === "comment" ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <MessageSquare className="h-3.5 w-3.5" />
+                    )}
+                    Commenter
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* CI checks */}
+            <div className="space-y-1.5">
+              <button
+                onClick={loadChecks}
+                disabled={loadingChecks}
+                className="inline-flex items-center gap-1.5 rounded-md border border-neutral-700 px-2.5 py-1 text-xs text-neutral-300 hover:bg-neutral-800 disabled:opacity-50"
+              >
+                {loadingChecks ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                )}
+                Checks CI
+              </button>
+              {checksError && (
+                <div className="rounded-md border border-red-900 bg-red-950/40 px-2 py-1 text-[11px] text-red-300">
+                  {checksError}
+                </div>
+              )}
+              {checks && checks.length === 0 && (
+                <p className="text-xs text-neutral-500">Aucun check rapporté.</p>
+              )}
+              {checks && checks.length > 0 && (
+                <ul className="space-y-1">
+                  {checks.map((c, i) => (
+                    <li key={i} className="flex items-center gap-2 text-xs">
+                      <span
+                        className={`h-2 w-2 shrink-0 rounded-full ${bucketColor(c.bucket)}`}
+                        title={c.state}
+                      />
+                      <span className="flex-1 truncate text-neutral-300">{c.name}</span>
+                      {c.link && (
+                        <button
+                          onClick={() => openUrl(c.link)}
+                          title="Voir les logs sur GitHub"
+                          className="shrink-0 text-neutral-500 hover:text-indigo-300"
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                        </button>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
 
             {pr.body.trim() && (

@@ -25,6 +25,11 @@ import {
   Code2,
   FileText,
   Settings as SettingsIcon,
+  Undo2,
+  Sparkles,
+  Archive,
+  Keyboard,
+  AlertTriangle,
 } from "lucide-react";
 import { api, errorText } from "./lib/api";
 import { notify as sendDesktopNotification } from "./lib/notify";
@@ -44,11 +49,12 @@ import { CommitFilter } from "./components/CommitFilter";
 import { BranchRow } from "./components/BranchRow";
 import { BranchDetail } from "./components/BranchDetail";
 import { CommitDetailPanel } from "./components/CommitDetailPanel";
-import { NewBranchDialog, SetParentDialog } from "./components/BranchDialogs";
+import { NewBranchDialog, SetParentDialog, MergeBranchDialog } from "./components/BranchDialogs";
 import { ConflictPanel } from "./components/ConflictPanel";
 import { SubmitDialog } from "./components/SubmitDialog";
 import { RepoGraphView } from "./components/RepoGraphView";
 import { TerminalDock, type AnalyzeTarget } from "./components/TerminalDock";
+import { ChatDock } from "./components/ChatDock";
 import { PrDetailPanel } from "./components/PrDetailPanel";
 import { IssuesList } from "./components/IssuesList";
 import { IssueDetailPanel } from "./components/IssueDetailPanel";
@@ -59,8 +65,25 @@ import { Sidebar } from "./components/Sidebar";
 import { GroupNameDialog } from "./components/GroupNameDialog";
 import { WorkspaceGroupFilter } from "./components/WorkspaceGroupFilter";
 import { SettingsModal } from "./components/SettingsModal";
+import { StashModal } from "./components/StashModal";
+import { DigestBanner } from "./components/DigestBanner";
+import { CommandPalette, type PaletteItem } from "./components/CommandPalette";
+import { ShortcutsHelp } from "./components/ShortcutsHelp";
+import { HelpPage } from "./components/HelpPage";
+import { DependencyGate, dependenciesIncomplete } from "./components/DependencyGate";
+import { WelcomeScreen } from "./components/WelcomeScreen";
+import { Tour, type GuideStep } from "./components/Tour";
 import { Spinner } from "./components/Spinner";
-import { loadSettings, saveSettings, type Settings } from "./lib/settings";
+import {
+  loadSettings,
+  saveSettings,
+  hasSeenTour,
+  markTourSeen,
+  hasSeenWelcome,
+  markWelcomeSeen,
+  aiLabel,
+  type Settings,
+} from "./lib/settings";
 import { useTheme } from "./lib/theme";
 import {
   loadGroups,
@@ -106,8 +129,21 @@ function flattenBranches(view: RepoView): Branch[] {
 
 type DialogState =
   | { type: "new"; parent: string }
-  | { type: "parent"; branch: Branch };
+  | { type: "parent"; branch: Branch }
+  | { type: "merge"; branch: Branch };
 type ViewMode = "graph" | "commits" | "tree" | "prs" | "issues" | "docs";
+
+// The full overview tour (targets always-present toolbar elements).
+const MAIN_TOUR: GuideStep[] = [
+  { title: "Bienvenue 👋", body: "Petit tour des fonctions principales. Tu peux fermer à tout moment (Échap)." },
+  { selector: '[data-tour="views"]', title: "Changer de vue", body: "Graphe des branches, commits, arborescence, PRs, issues, docs. (Raccourcis 1–6.)" },
+  { selector: '[data-tour="stack-actions"]', title: "Actions de pile", body: "Sync met à jour, Restack rebase la pile, Undo annule la dernière opération. (s / r / u)" },
+  { selector: '[data-tour="new-branch"]', title: "Créer une branche", body: "Au sommet de la pile, avec un nom suggéré par l'IA. (n)" },
+  { selector: '[data-tour="submit"]', title: "Publier", body: "Pousse et ouvre/met à jour les PRs ; description rédigée par l'IA. (p)" },
+  { selector: '[data-tour="claude"]', title: "Assistant IA", body: "Discute du dépôt, génère des messages, relis du code, merge guidé." },
+  { selector: '[data-tour="stash"]', title: "Stashes", body: "Vois ce que contient chaque stash, applique-le ou supprime-le." },
+  { title: "À toi de jouer 🚀", body: "Ctrl/⌘ + K pour la palette, ? pour les raccourcis. La page d'aide récapitule tout." },
+];
 
 export default function App() {
   const [repos, setRepos] = useState<string[]>(loadRepos);
@@ -122,6 +158,7 @@ export default function App() {
   const [commits, setCommits] = useState<CommitNode[]>([]);
   const [inspectCommit, setInspectCommit] = useState<string | null>(null);
   const [commitFilter, setCommitFilter] = useState<string[] | null>(null);
+  const [commitSearch, setCommitSearch] = useState("");
   const [panelWidth, setPanelWidth] = useState(460);
   const [showSubmit, setShowSubmit] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -145,7 +182,19 @@ export default function App() {
     | null
   >(null);
   const [settings, setSettings] = useState<Settings>(loadSettings);
+  // Display name of the active AI engine (Ollama model, or "Claude") for the AI surfaces.
+  const aiName = aiLabel(settings);
   const [showSettings, setShowSettings] = useState(false);
+  const [undoLabel, setUndoLabel] = useState<string | null>(null);
+  const [showStash, setShowStash] = useState(false);
+  const [stashCount, setStashCount] = useState(0);
+  const [digestDismissed, setDigestDismissed] = useState<Set<string>>(new Set());
+  const [showPalette, setShowPalette] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
+  const [showDeps, setShowDeps] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(() => !hasSeenWelcome());
+  const [guideSteps, setGuideSteps] = useState<GuideStep[] | null>(null);
   const { isModern } = useTheme();
   const notifiedKeys = useRef<Set<string>>(new Set());
   const totalUpdates = Object.values(updates).reduce((n, a) => n + a.length, 0);
@@ -225,9 +274,47 @@ export default function App() {
     document.addEventListener("mouseup", onUp);
   }
 
-  useEffect(() => {
-    api.health().then(setHealth).catch(() => {});
+  // Re-probe the toolchain; surfaced by the "Revérifier" button in the dependency gate.
+  // Only refreshes status — the gate stays open so the user sees the result and closes it.
+  const recheckHealth = useCallback(async () => {
+    try {
+      setHealth(await api.health());
+    } catch {
+      /* ignore */
+    }
   }, []);
+
+  // On launch, fetch health once and pop the gate if a required tool is missing or gh
+  // isn't authenticated, with the install links and instructions to fix it.
+  useEffect(() => {
+    api
+      .health()
+      .then((h) => {
+        setHealth(h);
+        // On the very first launch the welcome screen handles onboarding, so don't also
+        // pop the dependency gate (the footer "outils" pill still flags git/gh).
+        if (dependenciesIncomplete(h) && hasSeenWelcome()) setShowDeps(true);
+      })
+      .catch(() => {});
+  }, []);
+
+  // Keep the Rust-side AI backend (Anthropic vs Ollama) in sync with settings — on
+  // startup and on any change — since the spawn funnels read a process-global config.
+  useEffect(() => {
+    api
+      .setAiBackend(
+        settings.aiBackend,
+        settings.ollamaHost,
+        settings.ollamaModel,
+        settings.anthropicModel
+      )
+      .catch(() => {});
+  }, [
+    settings.aiBackend,
+    settings.ollamaHost,
+    settings.ollamaModel,
+    settings.anthropicModel,
+  ]);
 
   // One-time cleanup: drop group assignments for repos that no longer exist.
   useEffect(() => {
@@ -337,6 +424,104 @@ export default function App() {
     return () => window.clearInterval(id);
   }, [checkAllUpdates, settings.pollIntervalMs]);
 
+  // Refresh "what can I undo?" and the stash count after every view change.
+  useEffect(() => {
+    if (!selected) {
+      setUndoLabel(null);
+      setStashCount(0);
+      return;
+    }
+    api
+      .undoPeek(selected)
+      .then(setUndoLabel)
+      .catch(() => setUndoLabel(null));
+    api
+      .stashCount(selected)
+      .then(setStashCount)
+      .catch(() => setStashCount(0));
+  }, [selected, view]);
+
+  // Global keyboard shortcuts (Ctrl/Cmd+K palette, ? help, single-key actions).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setShowPalette((s) => !s);
+        return;
+      }
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const t = e.target as HTMLElement | null;
+      if (
+        t &&
+        (t.tagName === "INPUT" ||
+          t.tagName === "TEXTAREA" ||
+          t.tagName === "SELECT" ||
+          t.isContentEditable)
+      )
+        return;
+      if (showPalette || showShortcuts) return;
+      if (e.key === "?") {
+        setShowShortcuts(true);
+        return;
+      }
+      if (!selected || !view) return;
+      switch (e.key) {
+        case "1": setViewMode("graph"); break;
+        case "2": setViewMode("commits"); break;
+        case "3": setViewMode("tree"); break;
+        case "4": setViewMode("prs"); break;
+        case "5": setViewMode("issues"); break;
+        case "6": setViewMode("docs"); break;
+        case "s":
+          if (!view.conflict)
+            runMutation(api.sync(selected)).then((ok) => ok && notify("Synced ✓"));
+          break;
+        case "r":
+          if (!view.conflict) runMutation(api.restack(selected, null));
+          break;
+        case "n":
+          setDialog({ type: "new", parent: view.currentBranch ?? view.trunk });
+          break;
+        case "p":
+          if (view.prsAvailable && !view.conflict) setShowSubmit(true);
+          break;
+        case "u":
+          if (undoLabel && !view.conflict) runMutation(api.undo(selected));
+          break;
+        default:
+          break;
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selected, view, undoLabel, showPalette, showShortcuts]);
+
+  // First launch ever: run the overview tour once, when the first repo is loaded
+  // (so the spotlights have a real toolbar to point at). The welcome screen and the
+  // dependency gate take priority — don't overlay the tour on top of them.
+  useEffect(() => {
+    if (view && !hasSeenTour() && !showDeps && !showWelcome) {
+      markTourSeen();
+      setGuideSteps(MAIN_TOUR);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view]);
+
+  // Dismiss the welcome screen; chain into the tour when the user opts in and a repo is
+  // already loaded (otherwise the tour starts via the effect above on the first repo).
+  const finishWelcome = (startTour: boolean) => {
+    markWelcomeSeen();
+    setShowWelcome(false);
+    if (startTour) {
+      if (view && !hasSeenTour()) {
+        markTourSeen();
+        setGuideSteps(MAIN_TOUR);
+      }
+    } else {
+      markTourSeen(); // skipped onboarding → don't pop the tour later either
+    }
+  };
+
   // Open a repo and clear its update indicator (records current state as seen).
   const openRepo = useCallback((p: string) => {
     setSelected(p);
@@ -385,6 +570,7 @@ export default function App() {
     else if (kind === "restack") runMutation(api.restack(selected, branch.name));
     else if (kind === "checkout") runMutation(api.checkout(selected, branch.name));
     else if (kind === "publish") runMutation(api.publishBranch(selected, branch.name));
+    else if (kind === "merge") setDialog({ type: "merge", branch });
     else setDialog({ type: "parent", branch });
   }
 
@@ -393,12 +579,154 @@ export default function App() {
   const selectedCommit =
     inspectCommit ? commits.find((c) => c.sha === inspectCommit) ?? null : null;
 
+  // Command-palette items (branches + actions + views). PRs/issues are added lazily
+  // inside the palette itself.
+  const paletteItems: PaletteItem[] = [];
+  if (view && selected) {
+    const repo = selected;
+    for (const b of flattenBranches(view)) {
+      paletteItems.push({
+        id: `b-${b.name}`,
+        group: "Branches",
+        label: b.name,
+        hint: b.isCurrent ? "courante" : b.isTrunk ? "tronc" : undefined,
+        icon: <GitBranch className="h-4 w-4 text-indigo-400" />,
+        run: () => {
+          setInspectPr(null);
+          setInspectIssue(null);
+          setInspect(b.name);
+          setViewMode("graph");
+        },
+      });
+    }
+    if (undoLabel) {
+      paletteItems.push({
+        id: "a-undo",
+        group: "Actions",
+        label: `Undo : ${undoLabel}`,
+        icon: <Undo2 className="h-4 w-4" />,
+        run: () => {
+          runMutation(api.undo(repo));
+        },
+      });
+    }
+    paletteItems.push(
+      {
+        id: "a-sync",
+        group: "Actions",
+        label: "Sync",
+        icon: <DownloadCloud className="h-4 w-4" />,
+        run: () => {
+          runMutation(api.sync(repo)).then((ok) => ok && notify("Synced ✓"));
+        },
+      },
+      {
+        id: "a-restack",
+        group: "Actions",
+        label: "Restack all",
+        icon: <Layers className="h-4 w-4" />,
+        run: () => {
+          runMutation(api.restack(repo, null));
+        },
+      },
+      {
+        id: "a-submit",
+        group: "Actions",
+        label: "Submit",
+        icon: <GitPullRequest className="h-4 w-4" />,
+        run: () => setShowSubmit(true),
+      },
+      {
+        id: "a-new",
+        group: "Actions",
+        label: "New branch",
+        icon: <Plus className="h-4 w-4" />,
+        run: () => setDialog({ type: "new", parent: view.currentBranch ?? view.trunk }),
+      },
+      {
+        id: "a-stash",
+        group: "Actions",
+        label: "Stashes",
+        icon: <Archive className="h-4 w-4" />,
+        run: () => setShowStash(true),
+      },
+      {
+        id: "a-claude",
+        group: "Actions",
+        label: `Demander à ${aiName}`,
+        icon: <Sparkles className="h-4 w-4" />,
+        run: () => setTerminal({ repoPath: repo, target: { kind: "repo" }, mode: "" }),
+      },
+      {
+        id: "a-settings",
+        group: "Actions",
+        label: "Settings",
+        icon: <SettingsIcon className="h-4 w-4" />,
+        run: () => setShowSettings(true),
+      },
+      {
+        id: "a-shortcuts",
+        group: "Actions",
+        label: "Raccourcis clavier",
+        icon: <Keyboard className="h-4 w-4" />,
+        run: () => setShowShortcuts(true),
+      },
+      {
+        id: "a-help",
+        group: "Actions",
+        label: "Aide / Guide interactif",
+        icon: <Sparkles className="h-4 w-4" />,
+        run: () => setShowHelp(true),
+      }
+    );
+    const palViews: [ViewMode, string][] = [
+      ["graph", "Vue : Branch graph"],
+      ["commits", "Vue : Commit graph"],
+      ["tree", "Vue : Tree"],
+      ["prs", "Vue : Pull requests"],
+      ["issues", "Vue : Issues"],
+      ["docs", "Vue : Markdown docs"],
+    ];
+    for (const [m, label] of palViews) {
+      paletteItems.push({
+        id: `v-${m}`,
+        group: "Vues",
+        label,
+        icon: <ListTree className="h-4 w-4" />,
+        run: () => setViewMode(m),
+      });
+    }
+  }
+
+  // Per-feature guides launched from the "Tester" buttons in the help page. Each navigates
+  // to the feature (action), then spotlights/explains it — without blocking interaction.
+  const guides: Record<string, GuideStep[]> = {
+    "view-graph": [{ action: () => setViewMode("graph"), title: "Graphe des branches", body: "Voici ta pile. Glisse une branche sur une autre pour la re-parenter ; les pastilles montrent l'état (CI, review, retard…)." }],
+    "view-commits": [{ action: () => setViewMode("commits"), selector: '[data-tour="commit-search"]', title: "Graphe des commits", body: "Le DAG des commits. Tape ici pour filtrer par message / sha / auteur." }],
+    "commit-search": [{ action: () => setViewMode("commits"), selector: '[data-tour="commit-search"]', title: "Recherche de commits", body: "Tape : les commits non-matchés s'estompent et la vue se recentre sur les résultats." }],
+    "commit-ops": [{ action: () => setViewMode("commits"), title: "Actions de commit", body: "Clique un commit → panneau de détail : Summary/Detailed, AI Review, Cherry-pick, et au survol reword (IA) / drop / squash / move." }],
+    tree: [{ action: () => setViewMode("tree"), title: "Vue Tree", body: "La pile en liste. Survole une branche pour ses actions, clique-la pour le détail." }],
+    "branch-ops": [{ action: () => setViewMode("tree"), title: "Actions de branche", body: "Survole une branche → checkout, set parent, restack, merge, track/untrack." }],
+    prs: [{ action: () => setViewMode("prs"), title: "Pull requests", body: "Ouvre une PR : Approuver / Changements / Commenter, checks CI + logs, AI Review." }],
+    issues: [{ action: () => setViewMode("issues"), title: "Issues", body: "La liste des issues et leur détail." }],
+    docs: [{ action: () => setViewMode("docs"), title: "Docs", body: "Les fichiers Markdown du dépôt." }],
+    views: [{ selector: '[data-tour="views"]', title: "Vues", body: "Clique pour changer de vue (ou les touches 1–6)." }],
+    sync: [{ selector: '[data-tour="stack-actions"]', title: "Sync / Restack / Undo", body: "Sync met à jour, Restack rebase la pile, Undo annule. Clique pour tester." }],
+    "new-branch": [{ selector: '[data-tour="new-branch"]', title: "Nouvelle branche", body: "Clique pour créer une branche (nom suggéré par l'IA)." }],
+    submit: [{ selector: '[data-tour="submit"]', title: "Submit", body: "Pousse et ouvre/met à jour les PRs. Clique pour voir le plan et la description rédigée par l'IA." }],
+    claude: [{ selector: '[data-tour="claude"]', title: "Assistant IA", body: "Clique pour discuter du dépôt avec Claude." }],
+    stash: [{ action: () => setShowStash(true), title: "Stashes", body: "Voici tes stashes : déplie pour voir les fichiers, puis Apply / Pop / Drop." }],
+    palette: [{ action: () => setShowPalette(true), title: "Palette de commandes", body: "Tape une branche, une PR, une action… Entrée pour lancer, Échap pour fermer." }],
+    shortcuts: [{ action: () => setShowShortcuts(true), title: "Raccourcis clavier", body: "La liste des raccourcis (tu peux aussi appuyer sur ?)." }],
+  };
+
   const panel =
     selected &&
     (inspectPr != null ? (
       <PrDetailPanel
         repoPath={selected}
         number={inspectPr}
+        aiName={aiName}
         onClose={() => setInspectPr(null)}
         onAnalyze={(number, mode) =>
           setTerminal({ repoPath: selected!, target: { kind: "pr", number }, mode })
@@ -417,9 +745,14 @@ export default function App() {
         <CommitDetailPanel
           repoPath={selected}
           node={selectedCommit}
+          aiName={aiName}
+          branches={view ? flattenBranches(view).map((b) => b.name) : []}
           onClose={() => setInspectCommit(null)}
           onAnalyze={(sha, mode) =>
             setTerminal({ repoPath: selected!, target: { kind: "commit", sha }, mode })
+          }
+          onCherryPick={(sha, target) =>
+            selected && runMutation(api.cherryPick(selected, sha, target))
           }
         />
       )
@@ -580,13 +913,24 @@ export default function App() {
           ) : (
             <span className="text-neutral-500">gh: not logged in</span>
           )}
-          <button
-            onClick={() => setShowSettings(true)}
-            title="Settings"
-            className="rounded p-1 text-neutral-500 hover:bg-neutral-800 hover:text-neutral-200"
-          >
-            <SettingsIcon className="h-3.5 w-3.5" />
-          </button>
+          <div className="flex items-center gap-1.5">
+            {health && dependenciesIncomplete(health) && (
+              <button
+                onClick={() => setShowDeps(true)}
+                title="Des outils requis manquent — cliquer pour voir"
+                className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-amber-400 ring-1 ring-inset ring-amber-500/20 hover:bg-amber-500/20"
+              >
+                <AlertTriangle className="h-3 w-3" /> outils
+              </button>
+            )}
+            <button
+              onClick={() => setShowSettings(true)}
+              title="Settings"
+              className="rounded p-1 text-neutral-500 hover:bg-neutral-800 hover:text-neutral-200"
+            >
+              <SettingsIcon className="h-3.5 w-3.5" />
+            </button>
+          </div>
         </div>
       </aside>
 
@@ -667,7 +1011,21 @@ export default function App() {
                     </span>
                   )}
                 </button>
+                <button
+                  data-tour="stash"
+                  onClick={() => setShowStash(true)}
+                  title={stashCount > 0 ? `${stashCount} stash(es)` : "Stashes"}
+                  className="relative rounded p-1.5 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100"
+                >
+                  <Archive className="h-4 w-4" />
+                  {stashCount > 0 && (
+                    <span className="absolute -right-0.5 -top-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-amber-600 px-1 text-[9px] font-semibold text-white">
+                      {stashCount}
+                    </span>
+                  )}
+                </button>
                 <div
+                  data-tour="views"
                   className={
                     isModern
                       ? "flex gap-0.5 rounded-lg border border-neutral-700/80 bg-neutral-900/40 p-1"
@@ -682,25 +1040,47 @@ export default function App() {
                   {toggle("docs", "Markdown docs", <FileText className="h-4 w-4" />)}
                 </div>
                 {isModern && <div className="mx-0.5 h-5 w-px bg-neutral-800" />}
-                <button
-                  onClick={async () => {
-                    if (selected && (await runMutation(api.sync(selected)))) notify("Synced ✓");
-                  }}
-                  disabled={loading || !!view.conflict}
-                  title="Fetch origin, fast-forward trunk, clean up merged PRs, then restack"
-                  className="inline-flex items-center gap-1.5 rounded-md border border-neutral-700 px-2.5 py-1.5 text-xs font-medium text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
+                <div
+                  data-tour="stack-actions"
+                  className={
+                    isModern
+                      ? "flex gap-0.5 rounded-lg border border-neutral-700/80 bg-neutral-900/40 p-1"
+                      : "flex rounded-md border border-neutral-700 p-0.5"
+                  }
                 >
-                  <DownloadCloud className="h-3.5 w-3.5" /> Sync
-                </button>
+                  <button
+                    onClick={async () => {
+                      if (selected && (await runMutation(api.sync(selected))))
+                        notify("Synced ✓");
+                    }}
+                    disabled={loading || !!view.conflict}
+                    title="Sync : fetch + fast-forward du tronc + nettoyage des PR mergées, puis restack"
+                    className="rounded p-1.5 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100 disabled:opacity-40"
+                  >
+                    <DownloadCloud className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => selected && runMutation(api.restack(selected, null))}
+                    disabled={loading || !!view.conflict}
+                    title="Restack toute la pile sur ses parents"
+                    className="rounded p-1.5 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100 disabled:opacity-40"
+                  >
+                    <Layers className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (selected && undoLabel && (await runMutation(api.undo(selected))))
+                        notify("Undone ✓");
+                    }}
+                    disabled={loading || !undoLabel || !!view.conflict}
+                    title={undoLabel ? `Annuler : ${undoLabel}` : "Rien à annuler"}
+                    className="rounded p-1.5 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100 disabled:opacity-40"
+                  >
+                    <Undo2 className="h-4 w-4" />
+                  </button>
+                </div>
                 <button
-                  onClick={() => selected && runMutation(api.restack(selected, null))}
-                  disabled={loading || !!view.conflict}
-                  title="Restack the whole stack onto its parents"
-                  className="inline-flex items-center gap-1.5 rounded-md border border-neutral-700 px-2.5 py-1.5 text-xs font-medium text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
-                >
-                  <Layers className="h-3.5 w-3.5" /> Restack all
-                </button>
-                <button
+                  data-tour="new-branch"
                   onClick={() =>
                     setDialog({ type: "new", parent: view.currentBranch ?? view.trunk })
                   }
@@ -709,6 +1089,7 @@ export default function App() {
                   <Plus className="h-3.5 w-3.5" /> New branch
                 </button>
                 <button
+                  data-tour="submit"
                   onClick={() => setShowSubmit(true)}
                   disabled={loading || !view.prsAvailable || !!view.conflict}
                   title={
@@ -719,6 +1100,17 @@ export default function App() {
                   className="inline-flex items-center gap-1.5 rounded-md bg-emerald-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
                 >
                   <GitPullRequest className="h-3.5 w-3.5" /> Submit
+                </button>
+                <button
+                  data-tour="claude"
+                  onClick={() =>
+                    selected &&
+                    setTerminal({ repoPath: selected, target: { kind: "repo" }, mode: "" })
+                  }
+                  title={`Demander à ${aiName} (discuter du dépôt)`}
+                  className="rounded p-1.5 text-indigo-300 hover:bg-indigo-950/40"
+                >
+                  <Sparkles className="h-4 w-4" />
                 </button>
                 {isModern && <div className="mx-0.5 h-5 w-px bg-neutral-800" />}
                 <button
@@ -759,6 +1151,29 @@ export default function App() {
             <>
               {/* View region */}
               <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+                {!switchingRepo &&
+                  selected &&
+                  (updates[selected]?.length ?? 0) > 0 &&
+                  !digestDismissed.has(selected) && (
+                    <DigestBanner
+                      repoPath={selected}
+                      items={updates[selected] ?? []}
+                      onSeen={() => {
+                        const s = selected;
+                        if (!s) return;
+                        api.markUpdatesSeen(s).catch(() => {});
+                        setUpdates((u) => {
+                          const next = { ...u };
+                          delete next[s];
+                          return next;
+                        });
+                      }}
+                      onDismiss={() => {
+                        const s = selected;
+                        if (s) setDigestDismissed((d) => new Set(d).add(s));
+                      }}
+                    />
+                  )}
                 {!switchingRepo && (view?.conflict || error) && (
                   <div className="space-y-3 border-b border-neutral-800 p-4">
                     {view?.conflict && selected && (
@@ -844,19 +1259,33 @@ export default function App() {
                       untracked={view.untracked}
                       selected={inspect}
                       onSelect={(name) => setInspect(name)}
+                      onReparent={(branch, newParent) =>
+                        selected &&
+                        runMutation(api.setParent(selected, branch, newParent)).then(
+                          (ok) => ok && notify(`${branch} → ${newParent}`)
+                        )
+                      }
                     />
                   ) : viewMode === "commits" ? (
                     <div className="relative h-full">
-                      <div className="absolute left-3 top-3 z-10">
+                      <div className="absolute left-3 top-3 z-10 flex items-center gap-2">
                         <CommitFilter
                           branches={flattenBranches(view).map((b) => b.name)}
                           value={commitFilter}
                           onChange={setCommitFilter}
                         />
+                        <input
+                          data-tour="commit-search"
+                          value={commitSearch}
+                          onChange={(e) => setCommitSearch(e.target.value)}
+                          placeholder="Rechercher un commit…"
+                          className="w-56 rounded-md border border-neutral-700 bg-neutral-900/90 px-2.5 py-1.5 text-xs text-neutral-100 shadow-sm outline-none focus:border-indigo-600"
+                        />
                       </div>
                       <CommitGraph
                         nodes={commits}
                         selected={inspectCommit}
+                        query={commitSearch}
                         onSelect={(sha) => setInspectCommit(sha)}
                       />
                     </div>
@@ -910,18 +1339,30 @@ export default function App() {
           )}
         </div>
 
-        {terminal && (
-          <TerminalDock
-            repoPath={terminal.repoPath}
-            target={terminal.target}
-            mode={terminal.mode}
-            onClose={() => setTerminal(null)}
-          />
-        )}
+        {terminal &&
+          (terminal.target.kind === "repo" || settings.assistantUi === "chat" ? (
+            <ChatDock
+              repoPath={terminal.repoPath}
+              target={terminal.target}
+              mode={terminal.mode}
+              streaming={settings.chatStreaming}
+              aiName={aiName}
+              onClose={() => setTerminal(null)}
+            />
+          ) : (
+            <TerminalDock
+              repoPath={terminal.repoPath}
+              target={terminal.target}
+              mode={terminal.mode}
+              aiName={aiName}
+              onClose={() => setTerminal(null)}
+            />
+          ))}
       </main>
 
       {dialog?.type === "new" && view && (
         <NewBranchDialog
+          repoPath={selected ?? ""}
           parent={dialog.parent}
           branches={flattenBranches(view).map((b) => b.name)}
           onClose={() => setDialog(null)}
@@ -939,6 +1380,23 @@ export default function App() {
           onSubmit={(parent) =>
             selected && runMutation(api.setParent(selected, dialog.branch.name, parent))
           }
+        />
+      )}
+      {dialog?.type === "merge" && view && (
+        <MergeBranchDialog
+          source={dialog.branch.name}
+          current={view.currentBranch}
+          branches={flattenBranches(view).map((b) => b.name)}
+          onClose={() => setDialog(null)}
+          onSubmit={(source, target) => {
+            if (selected)
+              setTerminal({
+                repoPath: selected,
+                target: { kind: "merge-branches", source, target },
+                mode: "merge",
+              });
+            setDialog(null);
+          }}
         />
       )}
       {showSubmit && selected && (
@@ -959,6 +1417,15 @@ export default function App() {
         <SettingsModal
           settings={settings}
           onClose={() => setShowSettings(false)}
+          onOpenHelp={() => {
+            setShowSettings(false);
+            setShowHelp(true);
+          }}
+          onOpenDeps={() => {
+            setShowSettings(false);
+            void recheckHealth();
+            setShowDeps(true);
+          }}
           onSave={(s) => {
             setSettings(s);
             saveSettings(s);
@@ -966,6 +1433,57 @@ export default function App() {
           }}
         />
       )}
+      {showStash && selected && view && (
+        <StashModal
+          repoPath={selected}
+          dirty={view.dirty}
+          onClose={() => setShowStash(false)}
+          onChanged={() => {
+            if (selected) api.getRepoView(selected).then(setView).catch(() => {});
+          }}
+        />
+      )}
+      {showPalette && (
+        <CommandPalette
+          items={paletteItems}
+          repoPath={selected}
+          onOpenPr={(n) => {
+            setInspectPr(n);
+            setViewMode("prs");
+          }}
+          onOpenIssue={(n) => {
+            setInspectIssue(n);
+            setViewMode("issues");
+          }}
+          onClose={() => setShowPalette(false)}
+        />
+      )}
+      {showShortcuts && <ShortcutsHelp onClose={() => setShowShortcuts(false)} />}
+      {showHelp && (
+        <HelpPage
+          onClose={() => setShowHelp(false)}
+          onStartTour={() => {
+            setShowHelp(false);
+            setGuideSteps(MAIN_TOUR);
+          }}
+          onTest={(id) => {
+            const g = guides[id];
+            if (g) {
+              setShowHelp(false);
+              setGuideSteps(g);
+            }
+          }}
+        />
+      )}
+      {showWelcome && <WelcomeScreen onFinish={finishWelcome} />}
+      {showDeps && !showWelcome && health && (
+        <DependencyGate
+          health={health}
+          onRecheck={recheckHealth}
+          onClose={() => setShowDeps(false)}
+        />
+      )}
+      {guideSteps && <Tour steps={guideSteps} onClose={() => setGuideSteps(null)} />}
       {groupDialog?.mode === "new" && (
         <GroupNameDialog
           title="New group"

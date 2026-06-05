@@ -54,6 +54,31 @@ pub struct ConflictState {
     pub files: Vec<String>,
 }
 
+/// A file changed within a stash (status + path).
+#[derive(Serialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct StashFile {
+    /// Short status: M, A, D, R… (from `git stash show --name-status`).
+    pub status: String,
+    pub path: String,
+}
+
+/// A `git stash` entry, with the files it holds so the user can see what's inside.
+#[derive(Serialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct StashEntry {
+    pub index: usize,
+    /// e.g. `stash@{0}`.
+    pub ref_name: String,
+    /// The stash message (without the "On <branch>:" prefix).
+    pub message: String,
+    /// The branch the stash was created on.
+    pub branch: String,
+    /// Relative creation date, e.g. "2 hours ago".
+    pub date: String,
+    pub files: Vec<StashFile>,
+}
+
 /// The full view of a repository sent to the frontend.
 #[derive(Serialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -271,4 +296,24 @@ pub struct ConflictSuggestion {
     pub explanation: String,
     /// Full resolved file content, ready to write back.
     pub resolution: String,
+}
+
+/// An AI-generated PR title + Markdown body.
+#[derive(Serialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct PrDescription {
+    pub title: String,
+    pub body: String,
+}
+
+/// One CI check on a PR (from `gh pr checks`).
+#[derive(Serialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct CheckRun {
+    pub name: String,
+    /// pass | fail | pending | skipping | cancel
+    pub bucket: String,
+    pub state: String,
+    /// Web URL of the check run's logs.
+    pub link: String,
 }

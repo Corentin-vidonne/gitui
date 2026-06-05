@@ -9,6 +9,9 @@ struct ItemSnap {
     updated_at: String,
     title: String,
     state: String,
+    /// CI rollup for PRs ("SUCCESS"|"FAILURE"|"PENDING"|""); empty for issues.
+    #[serde(default)]
+    checks: String,
 }
 
 /// Persisted per-repo baseline of "what the user has already seen".
@@ -20,7 +23,7 @@ struct Snapshot {
 }
 
 /// One piece of new activity surfaced to the UI / a notification.
-#[derive(Serialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateItem {
     /// Stable, change-sensitive id (includes updatedAt) so the frontend notifies once.
@@ -68,12 +71,14 @@ fn write_snapshot(file: &Path, snap: &Snapshot) {
 /// Read `gh <kind> list` (kind = "pr" | "issue") into number -> snapshot.
 fn gh_items(repo: &Path, kind: &str) -> BTreeMap<u64, ItemSnap> {
     let mut map = BTreeMap::new();
+    let fields = if kind == "pr" {
+        "number,title,state,updatedAt,statusCheckRollup"
+    } else {
+        "number,title,state,updatedAt"
+    };
     let r = match proc::run(
         "gh",
-        [
-            kind, "list", "--state", "all", "-L", "50", "--json",
-            "number,title,state,updatedAt",
-        ],
+        [kind, "list", "--state", "all", "-L", "50", "--json", fields],
         Some(repo),
     ) {
         Ok(r) if r.success => r,
@@ -89,12 +94,18 @@ fn gh_items(repo: &Path, kind: &str) -> BTreeMap<u64, ItemSnap> {
                 Some(n) => n,
                 None => continue,
             };
+            let checks = if kind == "pr" {
+                crate::github::rollup_state(it.get("statusCheckRollup")).unwrap_or_default()
+            } else {
+                String::new()
+            };
             map.insert(
                 num,
                 ItemSnap {
                     updated_at: it.get("updatedAt").and_then(|x| x.as_str()).unwrap_or("").to_string(),
                     title: it.get("title").and_then(|x| x.as_str()).unwrap_or("").to_string(),
                     state: it.get("state").and_then(|x| x.as_str()).unwrap_or("").to_string(),
+                    checks,
                 },
             );
         }
@@ -156,6 +167,27 @@ fn diff(old: &Snapshot, new: &Snapshot) -> Vec<UpdateItem> {
     };
     scan(&mut items, "pr", &old.prs, &new.prs);
     scan(&mut items, "issue", &old.issues, &new.issues);
+
+    // CI finished: a PR's checks went from running to a terminal state.
+    for (num, n) in &new.prs {
+        if let Some(o) = old.prs.get(num) {
+            if o.checks == "PENDING" && (n.checks == "SUCCESS" || n.checks == "FAILURE") {
+                let ok = n.checks == "SUCCESS";
+                items.push(UpdateItem {
+                    key: format!("ci:{}:{}", num, n.checks),
+                    kind: "pr".into(),
+                    number: Some(*num),
+                    title: n.title.clone(),
+                    detail: format!(
+                        "CI {} — PR #{} : {}",
+                        if ok { "réussie ✓" } else { "échouée ✗" },
+                        num,
+                        n.title
+                    ),
+                });
+            }
+        }
+    }
     items
 }
 
@@ -195,6 +227,7 @@ mod tests {
                             updated_at: (*upd).into(),
                             title: (*title).into(),
                             state: "OPEN".into(),
+                            ..Default::default()
                         },
                     )
                 })

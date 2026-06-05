@@ -21,14 +21,32 @@ const nodeTypes: NodeTypes = { commit: CommitNodeCard };
 export function CommitGraph({
   nodes: commits,
   selected,
+  query,
   onSelect,
 }: {
   nodes: CommitNode[];
   selected: string | null;
+  /** Text filter — non-matching commits are dimmed and the view recenters on matches. */
+  query: string;
   onSelect: (sha: string) => void;
 }) {
   const rf = useRef<ReactFlowInstance | null>(null);
   const palette = useThemePalette();
+
+  const matched = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return null;
+    return new Set(
+      commits
+        .filter(
+          (c) =>
+            c.subject.toLowerCase().includes(q) ||
+            c.shortSha.toLowerCase().includes(q) ||
+            c.author.toLowerCase().includes(q)
+        )
+        .map((c) => c.sha)
+    );
+  }, [commits, query]);
 
   const { nodes, edges } = useMemo(() => {
     const present = new Set(commits.map((c) => c.sha));
@@ -54,7 +72,11 @@ export function CommitGraph({
         id: c.sha,
         type: "commit",
         position: { x: pos.x - NODE_W / 2, y: pos.y - NODE_H / 2 },
-        data: { node: c, selected: c.sha === selected } as unknown as Record<string, unknown>,
+        data: {
+          node: c,
+          selected: c.sha === selected,
+          dimmed: matched ? !matched.has(c.sha) : false,
+        } as unknown as Record<string, unknown>,
       };
     });
     const edges: Edge[] = links.map((l) => ({
@@ -65,7 +87,7 @@ export function CommitGraph({
       style: { stroke: palette.graphEdge },
     }));
     return { nodes, edges };
-  }, [commits, selected, palette]);
+  }, [commits, selected, palette, matched]);
 
   // Open zoomed on the most recent commits (readable), not fit-all-zoomed-out.
   const focusRecent = useCallback(
@@ -80,6 +102,18 @@ export function CommitGraph({
   useEffect(() => {
     if (rf.current) focusRecent(rf.current);
   }, [focusRecent]);
+
+  // Recenter on the search matches when the query changes.
+  useEffect(() => {
+    if (matched && matched.size > 0 && rf.current) {
+      rf.current.fitView({
+        nodes: [...matched].map((sha) => ({ id: sha })),
+        padding: 0.3,
+        maxZoom: 1.15,
+        duration: 300,
+      });
+    }
+  }, [matched]);
 
   if (commits.length === 0) {
     return (

@@ -26,6 +26,9 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "category": "DeveloperTool",
+    "shortDescription": "Outil de piles de branches (stacked PRs)",
+    "longDescription": "gitui visualise l'arbre des branches, gère le restack (rebase en cascade), pousse et ouvre/met à jour les PRs GitHub, avec des aides IA via Claude Code.",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

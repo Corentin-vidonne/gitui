@@ -136,6 +136,58 @@ pub fn term_open_analyze_pr(
     spawn_claude_session(&app, &state, id, repo, &prompt, cols, rows)
 }
 
+/// Open an embedded terminal running `claude` to ASSIST with merging a Pull Request:
+/// readiness checks (CI, review, conflicts), strategy, the merge itself (with
+/// confirmation), and a reminder to Sync so the stack re-parents.
+#[tauri::command]
+pub fn term_open_merge_assist(
+    app: AppHandle,
+    state: State<'_, Terminals>,
+    id: String,
+    path: String,
+    number: u64,
+    cols: u16,
+    rows: u16,
+) -> Result<()> {
+    let root = git::repo_root(Path::new(&path))?;
+    let repo = Path::new(&root);
+    let detail = crate::github::pr_detail(repo, number)?;
+    let raw = git::local_branches(repo)?;
+    let trunk = git::trunk(repo, &raw);
+    let prompt = assist::merge_assist_prompt(
+        number,
+        &detail.title,
+        &detail.head_ref,
+        &detail.base_ref,
+        &trunk,
+    );
+    spawn_claude_session(&app, &state, id, repo, &prompt, cols, rows)
+}
+
+/// Open an embedded terminal running `claude` to ASSIST with merging one local branch
+/// into another (`source` into `target`) via a plain `git merge` — no PR involved.
+#[tauri::command]
+pub fn term_open_merge_branches(
+    app: AppHandle,
+    state: State<'_, Terminals>,
+    id: String,
+    path: String,
+    source: String,
+    target: String,
+    cols: u16,
+    rows: u16,
+) -> Result<()> {
+    if source == target {
+        return Err(AppError::new("Source and target branches must differ"));
+    }
+    let root = git::repo_root(Path::new(&path))?;
+    let repo = Path::new(&root);
+    let raw = git::local_branches(repo)?;
+    let trunk = git::trunk(repo, &raw);
+    let prompt = assist::branch_merge_prompt(&source, &target, &trunk);
+    spawn_claude_session(&app, &state, id, repo, &prompt, cols, rows)
+}
+
 /// Forward user keystrokes to the PTY.
 #[tauri::command]
 pub fn term_write(state: State<'_, Terminals>, id: String, data: String) -> Result<()> {

@@ -16,6 +16,9 @@ import {
   ArrowDown,
   Trash2,
   GitBranch,
+  GitMerge,
+  Sparkles,
+  Loader2,
 } from "lucide-react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import type { Branch, BranchActionKind, CommitInfo, RepoView } from "../lib/types";
@@ -80,25 +83,70 @@ function CommitActionBtn({
 }
 
 function RewordDialog({
+  repoPath,
   commit,
   busy,
   onSubmit,
   onClose,
 }: {
+  repoPath: string;
   commit: CommitInfo;
   busy: boolean;
   onSubmit: (message: string) => void;
   onClose: () => void;
 }) {
   const [msg, setMsg] = useState(commit.subject);
+  const [genning, setGenning] = useState<"simple" | "complet" | null>(null);
+  const [genError, setGenError] = useState<string | null>(null);
+
+  async function generate(mode: "simple" | "complet") {
+    setGenning(mode);
+    setGenError(null);
+    try {
+      setMsg((await api.generateCommitMessage(repoPath, commit.sha, mode)).trim());
+    } catch (e) {
+      setGenError(errorText(e));
+    } finally {
+      setGenning(null);
+    }
+  }
+
   return (
     <Modal title="Reword commit" onClose={onClose}>
       <div className="space-y-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs text-neutral-500">Générer&nbsp;:</span>
+          {(["simple", "complet"] as const).map((m) => (
+            <button
+              key={m}
+              onClick={() => generate(m)}
+              disabled={!!genning || busy}
+              title={
+                m === "simple"
+                  ? "Message court (≤5 mots), préfixe conventionnel"
+                  : "Message complet (sujet + corps), préfixe conventionnel"
+              }
+              className="inline-flex items-center gap-1 rounded-md border border-indigo-700 px-2 py-1 text-xs capitalize text-indigo-300 hover:bg-indigo-950/40 disabled:opacity-50"
+            >
+              {genning === m ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <Sparkles className="h-3 w-3" />
+              )}{" "}
+              {m}
+            </button>
+          ))}
+        </div>
+        {genError && (
+          <div className="rounded-md border border-red-900 bg-red-950/40 px-2 py-1 text-[11px] text-red-300">
+            {genError}
+          </div>
+        )}
         <textarea
           autoFocus
           value={msg}
           onChange={(e) => setMsg(e.target.value)}
-          rows={4}
+          rows={5}
           className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 outline-none focus:border-indigo-600"
         />
         <div className="flex justify-end gap-2">
@@ -352,6 +400,11 @@ export function BranchDetail({
             label="New branch"
             onClick={() => onAction("new-child", branch)}
           />
+          <ActionBtn
+            icon={<GitMerge className="h-3.5 w-3.5" />}
+            label="Merge"
+            onClick={() => onAction("merge", branch)}
+          />
           {!branch.isTrunk && branch.needsPush && (
             <ActionBtn
               icon={<UploadCloud className="h-3.5 w-3.5" />}
@@ -391,6 +444,7 @@ export function BranchDetail({
 
       {dialog?.kind === "reword" && (
         <RewordDialog
+          repoPath={repoPath}
           commit={dialog.commit}
           busy={busy}
           onClose={() => setDialog(null)}

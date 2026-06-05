@@ -1,8 +1,10 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import {
   ReactFlow,
   Background,
   Controls,
+  useNodesState,
+  useEdgesState,
   type Edge,
   type Node,
   type NodeTypes,
@@ -22,14 +24,17 @@ export function StackGraph({
   untracked,
   selected,
   onSelect,
+  onReparent,
 }: {
   roots: StackNode[];
   untracked: Branch[];
   selected: string | null;
   onSelect: (name: string) => void;
+  /** Drag a branch onto another → set its parent. */
+  onReparent: (branch: string, newParent: string) => void;
 }) {
   const palette = useThemePalette();
-  const { nodes, edges } = useMemo(() => {
+  const layout = useMemo(() => {
     const data: GraphNodeData[] = [];
     const links: { source: string; target: string }[] = [];
     const walk = (n: StackNode) => {
@@ -69,16 +74,45 @@ export function StackGraph({
     return { nodes, edges };
   }, [roots, untracked, selected, palette]);
 
+  // Stateful copy so nodes can be dragged; re-synced whenever the layout changes.
+  const [nodes, setNodes, onNodesChange] = useNodesState(layout.nodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(layout.edges);
+  useEffect(() => {
+    setNodes(layout.nodes);
+    setEdges(layout.edges);
+  }, [layout, setNodes, setEdges]);
+
   return (
     <div className="h-full w-full">
       <ReactFlow
         nodes={nodes}
         edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
         nodeTypes={nodeTypes}
         onNodeClick={(_, n) => onSelect(n.id)}
+        onNodeDragStop={(_, node) => {
+          // Drop the node onto another → re-parent it; otherwise snap back.
+          const cx = node.position.x + NODE_W / 2;
+          const cy = node.position.y + NODE_H / 2;
+          const target = nodes.find(
+            (n) =>
+              n.id !== node.id &&
+              cx >= n.position.x &&
+              cx <= n.position.x + NODE_W &&
+              cy >= n.position.y &&
+              cy <= n.position.y + NODE_H
+          );
+          const dragged = (node.data as unknown as GraphNodeData).branch;
+          if (target && !dragged.isTrunk && target.id !== dragged.parent) {
+            onReparent(node.id, target.id);
+          } else {
+            setNodes(layout.nodes); // snap back
+          }
+        }}
         fitView
         fitViewOptions={{ padding: 0.25 }}
-        nodesDraggable={false}
+        nodesDraggable
         nodesConnectable={false}
         minZoom={0.2}
       >

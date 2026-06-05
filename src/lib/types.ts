@@ -36,6 +36,27 @@ export type ConflictState = {
   files: string[];
 };
 
+export type StashFile = { status: string; path: string };
+
+export type StashEntry = {
+  index: number;
+  refName: string;
+  message: string;
+  branch: string;
+  date: string;
+  files: StashFile[];
+};
+
+export type PrDescription = { title: string; body: string };
+
+export type CheckRun = {
+  name: string;
+  /** pass | fail | pending | skipping | cancel */
+  bucket: string;
+  state: string;
+  link: string;
+};
+
 export type RepoView = {
   repoRoot: string;
   name: string;
@@ -62,7 +83,8 @@ export type BranchActionKind =
   | "untrack"
   | "restack"
   | "checkout"
-  | "publish";
+  | "publish"
+  | "merge";
 
 export type CommitInfo = {
   sha: string;

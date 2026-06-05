@@ -1,10 +1,11 @@
 use crate::error::{AppError, Result};
 use crate::git;
 use std::path::Path;
+use std::sync::{Mutex, OnceLock};
 
 /// Resolve the full path to the `claude` executable (so we spawn it directly,
 /// bypassing any shell — Windows PowerShell 5.1 mangles quoted/multi-line args).
-fn resolve_claude() -> String {
+pub(crate) fn resolve_claude() -> String {
     #[cfg(windows)]
     {
         if let Ok(r) = crate::proc::run("where", ["claude"], None) {
@@ -23,6 +24,127 @@ fn resolve_claude() -> String {
         }
     }
     "claude".to_string()
+}
+
+/// Shown when an AI feature is invoked but the `claude` CLI isn't installed. Includes the
+/// install command + docs link. Claude is checked at point of use, never at startup.
+pub(crate) const CLAUDE_MISSING_MSG: &str = "Claude Code introuvable. Installe la CLI `claude` \
+     pour les aides IA : npm install -g @anthropic-ai/claude-code  ·  \
+     https://docs.claude.com/en/docs/claude-code/setup";
+
+/// Verify the `claude` CLI is runnable, returning a friendly install message if not. Called
+/// at the entry of each AI funnel (headless / chat / terminal) so the dependency is only
+/// checked when an AI feature is actually used. In Ollama mode `claude` is still the engine
+/// (Ollama only supplies the model), so we also require that a model has been chosen.
+pub(crate) fn ensure_claude_available() -> Result<()> {
+    let claude = resolve_claude();
+    let ok = crate::proc::run(&claude, ["--version"], None)
+        .map(|r| r.success)
+        .unwrap_or(false);
+    if !ok {
+        return Err(AppError::new(CLAUDE_MISSING_MSG));
+    }
+    let cfg = ai_config().lock().unwrap();
+    if cfg.backend == AiBackend::Ollama && cfg.ollama_model.trim().is_empty() {
+        return Err(AppError::new(
+            "Mode Ollama actif mais aucun modèle choisi — sélectionnes-en un dans \
+             Réglages → Backend IA.",
+        ));
+    }
+    Ok(())
+}
+
+/// Which engine backs the `claude` CLI: Anthropic's cloud API (the user's own login) or a
+/// local Ollama server exposing the Anthropic-compatible API.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub(crate) enum AiBackend {
+    Anthropic,
+    Ollama,
+}
+
+#[derive(Clone, Debug)]
+pub(crate) struct AiConfig {
+    pub backend: AiBackend,
+    pub ollama_host: String,
+    pub ollama_model: String,
+    /// Model for Anthropic mode (alias like `sonnet`/`opus`/`haiku` or a full name);
+    /// empty means "use Claude Code's own default".
+    pub anthropic_model: String,
+}
+
+impl Default for AiConfig {
+    fn default() -> Self {
+        Self {
+            backend: AiBackend::Anthropic,
+            ollama_host: "http://localhost:11434".to_string(),
+            ollama_model: String::new(),
+            anthropic_model: String::new(),
+        }
+    }
+}
+
+/// Process-global AI backend config (same pattern as `undo::global()`), so the spawn
+/// funnels — which are plain functions, not command handlers with `State` — can read it
+/// without threading it through every call site. Synced from the frontend settings.
+pub(crate) fn ai_config() -> &'static Mutex<AiConfig> {
+    static CFG: OnceLock<Mutex<AiConfig>> = OnceLock::new();
+    CFG.get_or_init(|| Mutex::new(AiConfig::default()))
+}
+
+/// Update the global config from the frontend (`anthropic` or `ollama`).
+pub(crate) fn set_ai_config(
+    backend: &str,
+    ollama_host: String,
+    ollama_model: String,
+    anthropic_model: String,
+) {
+    let mut cfg = ai_config().lock().unwrap();
+    cfg.backend = if backend.eq_ignore_ascii_case("ollama") {
+        AiBackend::Ollama
+    } else {
+        AiBackend::Anthropic
+    };
+    cfg.ollama_host = ollama_host;
+    cfg.ollama_model = ollama_model;
+    cfg.anthropic_model = anthropic_model;
+}
+
+/// Environment variables to inject when launching `claude`. Anthropic mode adds none (the
+/// user's own login/config applies). Ollama mode points `claude` at the local server and
+/// pins both the main and the small/fast model to the chosen local model — otherwise
+/// Claude Code's background calls would try (and fail) to reach Anthropic.
+pub(crate) fn ai_env() -> Vec<(String, String)> {
+    let cfg = ai_config().lock().unwrap().clone();
+    match cfg.backend {
+        AiBackend::Anthropic => {
+            // Override only the main model when chosen; leave the small/fast model as the
+            // account default (no reason to pay big-model cost for background calls). Empty
+            // means Claude Code's own default model.
+            let model = cfg.anthropic_model.trim();
+            if model.is_empty() {
+                Vec::new()
+            } else {
+                vec![("ANTHROPIC_MODEL".to_string(), model.to_string())]
+            }
+        }
+        AiBackend::Ollama => {
+            let host = {
+                let h = cfg.ollama_host.trim().trim_end_matches('/');
+                if h.is_empty() { "http://localhost:11434" } else { h }.to_string()
+            };
+            let mut env = vec![
+                ("ANTHROPIC_BASE_URL".to_string(), host),
+                ("ANTHROPIC_AUTH_TOKEN".to_string(), "ollama".to_string()),
+                ("ANTHROPIC_API_KEY".to_string(), String::new()),
+            ];
+            let model = cfg.ollama_model.trim();
+            if !model.is_empty() {
+                env.push(("ANTHROPIC_MODEL".to_string(), model.to_string()));
+                env.push(("ANTHROPIC_SMALL_FAST_MODEL".to_string(), model.to_string()));
+            }
+            env
+        }
+    }
 }
 
 /// The prompt injected into `claude` to analyze a commit.
@@ -108,10 +230,145 @@ pub fn pr_analysis_prompt(
     )
 }
 
+/// The prompt injected into `claude` to ASSIST with merging a Pull Request, in the
+/// context of this stacked-PR tool: check readiness, choose a strategy, run the merge
+/// (only after the user confirms), then re-sync the stack. Unlike the analysis prompts
+/// this one is meant to *act* — `gh pr merge` is NOT among the pre-allowed read-only
+/// tools, so it will ask for confirmation in the terminal before anything lands.
+pub fn merge_assist_prompt(number: u64, title: &str, head: &str, base: &str, trunk: &str) -> String {
+    let title = title.replace('"', "'");
+    let position = if base == trunk {
+        format!(
+            "Cette PR est à la BASE de la pile (sa base `{base}` est le tronc `{trunk}`) : \
+             elle peut être mergée maintenant."
+        )
+    } else {
+        format!(
+            "ATTENTION : la base de cette PR est `{base}`, et non le tronc `{trunk}`. Dans une pile \
+             on merge de bas en haut — la ou les PR parentes doivent être mergées d'abord. Signale-le \
+             clairement et n'effectue PAS le merge tant que cette PR n'est pas posée sur le tronc."
+        )
+    };
+    format!(
+        "Tu es un expert Git/GitHub qui m'aide à MERGER une Pull Request dans un dépôt géré en PILES \
+         de branches (stacked PRs). PR : #{number} (titre : {title}), branche `{head}` → `{base}`. \
+         Tronc : `{trunk}`.\n\n\
+         {position}\n\n\
+         Avance par étapes et DEMANDE-MOI confirmation avant toute action qui écrit (le merge) :\n\
+         1. Diagnostic de mergeabilité : exécute `gh pr view {number}` (état, reviewDecision, mergeable, \
+            conflits) et `gh pr checks {number}` (CI). Résume en quelques lignes et liste clairement les \
+            éventuels bloquants.\n\
+         2. Stratégie : si tout est au vert, recommande une méthode. Par défaut pour une pile, `--squash` \
+            (tronc linéaire ; les enfants seront re-parentés ensuite). Explique brièvement et laisse-moi \
+            trancher.\n\
+         3. Merge : après MON accord explicite, lance le merge, p. ex. `gh pr merge {number} --squash`. \
+            N'ajoute PAS `--delete-branch` si des PR enfants sont encore empilées sur `{head}`.\n\
+         4. Après le merge : rappelle-moi de cliquer sur **Sync** dans gitui — l'app fast-forward le tronc, \
+            re-parente automatiquement les enfants de la branche mergée sur son parent et cesse de la suivre \
+            (la branche locale n'est jamais supprimée).\n\n\
+         Commence par l'étape 1, puis attends mes réponses ; reste disponible pour la suite."
+    )
+}
+
+/// The prompt injected into `claude` to ASSIST with merging one local branch into
+/// another (a plain `git merge`, NOT a PR). `source` is merged into `target`. As with
+/// the PR merge assist, the writing commands (`git switch`/`merge`/`commit`) are not
+/// pre-allowed, so they prompt for confirmation in the terminal.
+pub fn branch_merge_prompt(source: &str, target: &str, trunk: &str) -> String {
+    format!(
+        "Tu es un expert Git qui m'aide à MERGER localement la branche `{source}` (source) dans la \
+         branche `{target}` (cible). Le dépôt est géré en piles de branches (stacked PRs), tronc `{trunk}` ; \
+         on y restacke (rebase) d'habitude, mais ici je veux EXPLICITEMENT un merge — respecte ce choix.\n\n\
+         Avance par étapes et DEMANDE-MOI confirmation avant toute commande qui écrit \
+         (checkout, merge, commit) :\n\
+         1. État des lieux : `git status` (l'arbre de travail est-il propre ?), puis compare les branches — \
+            `git log --oneline {target}..{source}` (ce que `{source}` apporte) et `git log --oneline {source}..{target}` \
+            (ce qui manque à `{source}`). Indique si un fast-forward est possible et signale les risques de conflit.\n\
+         2. Stratégie : recommande la méthode adaptée — fast-forward si possible, sinon un commit de merge \
+            (`git merge {source}`), ou `--squash` si je veux un seul commit. Explique brièvement et laisse-moi trancher.\n\
+         3. Exécution : après MON accord, place-toi sur la cible (`git switch {target}`) puis lance le merge \
+            (p. ex. `git merge {source}`). Montre le résultat.\n\
+         4. En cas de conflit : NE devine pas — liste les fichiers en conflit (`git status`), aide-moi à les \
+            résoudre un par un (tu peux proposer le contenu final de chaque fichier), puis finalise avec \
+            `git add` + `git commit`. Si je préfère annuler, utilise `git merge --abort`.\n\n\
+         Commence par l'étape 1 et attends mes réponses ; reste disponible pour la suite."
+    )
+}
+
+/// Prompt asking `claude` to write a commit message for `sha`, returned as JSON.
+/// `mode` is "simple" (≤5 words) or "complet" (subject + body). The message must start
+/// with a conventional-commit type (`feat:`, `fix:`, `update:`, …).
+pub fn commit_message_prompt(sha: &str, mode: &str) -> String {
+    let short: String = sha.chars().take(8).collect();
+    let spec = if mode == "simple" {
+        "Génère un message TRÈS COURT : le préfixe conventionnel suivi de 5 MOTS MAXIMUM \
+         (ex. `fix: corrige le crash au démarrage`). Une seule ligne, aucun corps."
+    } else {
+        "Génère un message COMPLET : une ligne de sujet (préfixe conventionnel, ~50 caractères) \
+         qui résume le changement, puis une ligne vide, puis un corps en quelques puces \
+         expliquant le quoi et le pourquoi."
+    };
+    format!(
+        "Tu es un expert Git. Lis le commit `{short}` avec `git show {sha}` (diff complet), \
+         puis rédige SON message de commit.\n\n\
+         Le message DOIT commencer par un type conventionnel suivi de deux-points — l'un de : \
+         `feat:`, `fix:`, `update:`, `refactor:`, `docs:`, `test:`, `chore:`, `style:`, `perf:`, \
+         `build:`, `ci:` — choisis le plus adapté au diff.\n\
+         {spec}\n\n\
+         Rédige en français. RÉPONDS UNIQUEMENT avec un objet JSON valide, sans Markdown, de la forme :\n\
+         {{\"message\": \"<le message de commit, \\n autorisés pour le corps>\"}}"
+    )
+}
+
+/// Prompt to REVIEW a single commit and return STRUCTURED JSON findings (same contract
+/// as `pr_review_prompt`, but for one commit's diff).
+pub fn commit_review_prompt(sha: &str, message: &str, diff: &str) -> String {
+    let short: String = sha.chars().take(8).collect();
+    let subject = message.lines().next().unwrap_or("").replace('"', "'");
+    format!(
+        "Tu es un relecteur de code expert et exigeant. Relis le commit `{short}` (sujet : {subject}).\n\
+         Voici son DIFF UNIFIÉ COMPLET (il a pu être tronqué s'il est très volumineux) :\n\
+         ```diff\n{diff}\n```\n\n\
+         Analyse le diff et relève les problèmes concrets et actionnables : bugs, régressions, cas limites, \
+         sécurité, fuites/performances, lisibilité, tests manquants.\n\n\
+         RÉPONDS UNIQUEMENT avec un objet JSON valide — aucun texte avant ou après, pas de Markdown. \
+         Les clés doivent être EXACTEMENT `summary` et `findings`. Forme :\n\
+         {{\"summary\": \"<2 à 4 phrases : ce que fait le commit et le verdict global>\", \
+         \"findings\": [{{\"file\": \"<chemin relatif>\", \"line\": <numéro ou null>, \
+         \"severity\": \"info|warning|critical\", \"title\": \"<titre court>\", \"detail\": \"<explication + correctif>\"}}]}}\n\
+         Limite-toi aux ~15 findings les plus importants ; si rien à signaler, renvoie une liste vide. \
+         Rédige summary, title et detail en français."
+    )
+}
+
+/// Prompt to suggest a branch name (kebab-case, conventional prefix) from a context blurb.
+pub fn branch_name_prompt(context: &str) -> String {
+    format!(
+        "Propose UN nom de branche git, court, basé sur ce contexte :\n{context}\n\n\
+         Règles : préfixe de type (`feat/`, `fix/`, `chore/`, `refactor/`, `docs/`, `test/`…), \
+         puis 2 à 4 mots en kebab-case (minuscules, séparés par des tirets), sans espaces ni accents.\n\
+         RÉPONDS UNIQUEMENT avec un objet JSON : {{\"name\": \"feat/mon-changement\"}}"
+    )
+}
+
+/// Prompt to draft a PR title + Markdown body from a branch's commits and diffstat.
+pub fn pr_description_prompt(branch: &str, base: &str, commits: &str, stat: &str) -> String {
+    format!(
+        "Tu rédiges la description d'une Pull Request pour la branche `{branch}` (base `{base}`).\n\
+         Commits de la branche :\n{commits}\n\n\
+         Fichiers modifiés (git diff --stat) :\n{stat}\n\n\
+         Produis un TITRE concis (préfixe conventionnel `feat:`/`fix:`/… si pertinent, ~60 caractères) \
+         et un CORPS en Markdown : 1 à 2 phrases de contexte, puis une liste à puces des changements clés, \
+         et au besoin une courte section « Notes ». Rédige en français.\n\
+         RÉPONDS UNIQUEMENT avec un objet JSON : {{\"title\": \"<titre>\", \"body\": \"<corps Markdown, \\n autorisés>\"}}"
+    )
+}
+
 /// Run `claude` non-interactively (print mode) and return its stdout. Unlike the
 /// PTY path (which streams free text to a terminal), this is for one-shot calls
 /// whose output we parse as JSON. The needed context is embedded in `prompt`.
 pub fn run_claude_headless(repo: &Path, prompt: &str) -> Result<String> {
+    ensure_claude_available()?;
     let claude = resolve_claude();
     let mut args: Vec<String> = Vec::new();
     push_allowed_tools(&mut |a| args.push(a.to_string()));
@@ -119,7 +376,10 @@ pub fn run_claude_headless(repo: &Path, prompt: &str) -> Result<String> {
     // `--` ends option parsing so the variadic `--allowedTools` can't swallow the prompt.
     args.push("--".to_string());
     args.push(prompt.to_string());
-    let r = crate::proc::run(&claude, args.iter().map(String::as_str), Some(repo))
+    // Backend env (empty for Anthropic; Ollama points claude at the local model).
+    let env = ai_env();
+    let env_ref: Vec<(&str, &str)> = env.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect();
+    let r = crate::proc::run_env(&claude, args.iter().map(String::as_str), Some(repo), &env_ref)
         .map_err(|e| AppError::new(format!("Could not run claude: {e}")))?;
     if !r.success {
         return Err(AppError::new(format!(
@@ -235,7 +495,7 @@ const READONLY_TOOLS: [&str; 11] = [
     "Glob",
 ];
 
-fn push_allowed_tools(push: &mut impl FnMut(&str)) {
+pub(crate) fn push_allowed_tools(push: &mut impl FnMut(&str)) {
     for t in READONLY_TOOLS {
         push("--allowedTools");
         push(t);
@@ -245,7 +505,11 @@ fn push_allowed_tools(push: &mut impl FnMut(&str)) {
 /// A `CommandBuilder` that runs `claude` pre-seeded with `prompt`, for use inside a PTY.
 /// Spawned directly (no shell) so the multi-line prompt arg is passed intact.
 pub fn pty_command(repo: &Path, prompt: &str) -> Result<portable_pty::CommandBuilder> {
+    ensure_claude_available()?;
     let mut cmd = portable_pty::CommandBuilder::new(resolve_claude());
+    for (k, v) in ai_env() {
+        cmd.env(k, v);
+    }
     push_allowed_tools(&mut |a| {
         cmd.arg(a);
     });
@@ -281,6 +545,43 @@ pub fn launch_claude(repo: &Path, prompt: &str) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn merge_prompt_adapts_to_stack_position() {
+        // Bottom of the stack (base == trunk): mergeable now, no bottom-up warning.
+        let bottom = merge_assist_prompt(7, "Ma feature", "feat/x", "main", "main");
+        assert!(bottom.contains("#7"));
+        assert!(bottom.contains("gh pr merge 7"));
+        assert!(bottom.contains("BASE de la pile"));
+        assert!(!bottom.contains("de bas en haut"));
+
+        // Mid-stack (base is another branch): warn to merge the parent PR(s) first.
+        let mid = merge_assist_prompt(7, "Ma feature", "feat/x", "feat/parent", "main");
+        assert!(mid.contains("ATTENTION"));
+        assert!(mid.contains("de bas en haut"));
+    }
+
+    #[test]
+    fn branch_merge_prompt_names_both_branches_and_direction() {
+        let p = branch_merge_prompt("feat/x", "main", "main");
+        assert!(p.contains("`feat/x`"));
+        assert!(p.contains("`main`"));
+        // Direction: source merged into target, on the target branch.
+        assert!(p.contains("git merge feat/x"));
+        assert!(p.contains("git switch main"));
+    }
+
+    #[test]
+    fn commit_message_prompt_enforces_prefix_and_mode() {
+        let simple = commit_message_prompt("abc1234567", "simple");
+        assert!(simple.contains("git show abc1234567"));
+        assert!(simple.contains("feat:") && simple.contains("fix:") && simple.contains("update:"));
+        assert!(simple.contains("5 MOTS MAXIMUM"));
+        assert!(simple.contains("\"message\""));
+
+        let complet = commit_message_prompt("abc1234567", "complet");
+        assert!(complet.contains("COMPLET") && complet.contains("corps"));
+    }
 
     // Regression: `--allowedTools` is variadic, so the prompt MUST be passed
     // after a `--` separator. Without it the prompt is consumed as a tool value
