@@ -9,7 +9,21 @@ Built with **Tauri v2** (Rust core) + **React + TypeScript + Tailwind**. The Rus
 shells out to your system `git` and the GitHub CLI (`gh`), so it reuses your existing
 git behaviour and `gh` authentication — no tokens to manage.
 
-## Prerequisites
+## Download
+
+Grab a prebuilt installer for your OS from the **[latest release](https://github.com/Corentin-vidonne/mon-repo/releases/latest)** — no build toolchain needed:
+
+| OS | Installer |
+| --- | --- |
+| **Windows** | `.msi`, or `.exe` (NSIS setup) |
+| **macOS** | `.dmg` — Apple Silicon (`aarch64`) or Intel (`x64`) |
+| **Linux** | `.AppImage` (portable), `.deb` (Debian/Ubuntu), or `.rpm` (Fedora) |
+| **Arch / EndeavourOS** | `.pkg.tar.zst` — `sudo pacman -U gitui-*-x86_64.pkg.tar.zst` |
+
+The installed app still calls your system **`git`** and **`gh`** at runtime (run `gh auth login`
+once for PR features); **Claude Code (`claude`)** is optional and only used by the AI aides.
+
+## Prerequisites (build from source)
 
 - **Node.js** + npm
 - **Rust** (stable) — for the Tauri backend
@@ -73,7 +87,6 @@ conflict handling) → submit. The trunk (main/master) is auto-detected, never h
 - Auto re-parenting of children after a parent is **squash-merged**
 - Generated Rust↔TS types (`ts-rs`)
 - A headless **CLI** reusing the same core
-- Packaging / installer
 
 ## Project layout
 
