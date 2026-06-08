@@ -1137,10 +1137,12 @@ export default function App() {
               repoPath={selected}
               number={inspectPr}
               aiName={aiName}
+              trunk={view?.trunk ?? null}
               onClose={() => setInspectPr(null)}
               onAnalyze={(number, mode) =>
                 setTerminal({ repoPath: selected!, target: { kind: "pr", number }, mode })
               }
+              onMerged={(v) => setView(v)}
             />
           ) : viewMode === "commits" && selectedCommit && selected && !switchingRepo ? (
             <CommitPage

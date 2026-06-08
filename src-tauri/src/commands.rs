@@ -465,20 +465,12 @@ pub fn submit_plan(path: String, from: Option<String>) -> Result<Vec<SubmitStepI
         .collect())
 }
 
-/// Sync with origin: fetch, fast-forward the trunk, clean up merged PRs (re-parent + untrack,
-/// never delete), then restack survivors onto the updated trunk.
-#[tauri::command]
-pub fn sync(path: String) -> Result<RepoView> {
-    let root = git::repo_root(Path::new(&path))?;
-    let repo = Path::new(&root);
-    if git::rebase_in_progress(repo) {
-        return Err(AppError::new("Finish the in-progress restack before syncing"));
-    }
-    if git::is_dirty(repo) {
-        return Err(AppError::new("Commit or stash your changes before syncing"));
-    }
-
-    crate::undo::global().push(repo, "sync");
+/// Reconcile the local stack with origin and merged PRs: fetch, fast-forward the trunk,
+/// re-parent/untrack merged branches (never deleting them), then restack survivors onto
+/// the updated trunk. Shared by `sync` and the post-merge step of `merge_pr`. May pause on
+/// a restack conflict, which the caller's `build_view` surfaces. The caller is responsible
+/// for the rebase-in-progress / dirty-tree guards and the undo snapshot.
+fn reconcile_stack(repo: &Path) -> Result<()> {
     git::fetch(repo)?;
 
     let raw = git::local_branches(repo)?;
@@ -493,6 +485,56 @@ pub fn sync(path: String) -> Result<RepoView> {
     }
 
     let _ = stack::run(repo, None)?; // may pause on conflict; surfaced by build_view
+    Ok(())
+}
+
+/// Sync with origin: fetch, fast-forward the trunk, clean up merged PRs (re-parent + untrack,
+/// never delete), then restack survivors onto the updated trunk.
+#[tauri::command]
+pub fn sync(path: String) -> Result<RepoView> {
+    let root = git::repo_root(Path::new(&path))?;
+    let repo = Path::new(&root);
+    if git::rebase_in_progress(repo) {
+        return Err(AppError::new("Finish the in-progress restack before syncing"));
+    }
+    if git::is_dirty(repo) {
+        return Err(AppError::new("Commit or stash your changes before syncing"));
+    }
+
+    crate::undo::global().push(repo, "sync");
+    reconcile_stack(repo)?;
+    build_view(repo)
+}
+
+/// Merge a pull request directly (`gh pr merge`, no AI assistant), then reconcile the local
+/// stack so the merged branch's children re-parent onto its parent and everything restacks
+/// onto the updated trunk. `method` is "squash" (the default for a linear stacked trunk),
+/// "merge" or "rebase". Guarded like `sync` (clean tree, no paused restack) so the local
+/// reconcile after the remote merge always runs predictably. `delete_branch` opts into
+/// `gh`'s `--delete-branch` (off by default; leave off while children are stacked).
+#[tauri::command]
+pub fn merge_pr(
+    path: String,
+    number: u64,
+    method: String,
+    delete_branch: bool,
+) -> Result<RepoView> {
+    let root = git::repo_root(Path::new(&path))?;
+    let repo = Path::new(&root);
+    if git::rebase_in_progress(repo) {
+        return Err(AppError::new("Finish the in-progress restack before merging"));
+    }
+    if git::is_dirty(repo) {
+        return Err(AppError::new("Commit or stash your changes before merging"));
+    }
+
+    // The remote merge first — it doesn't touch the working tree. gh surfaces any
+    // mergeability / branch-protection failure as an error here.
+    github::merge_pr(repo, number, &method, delete_branch)?;
+
+    // Then reconcile locally so the stack reflects the merge (snapshot first for Undo).
+    crate::undo::global().push(repo, &format!("merge PR #{number}"));
+    reconcile_stack(repo)?;
     build_view(repo)
 }
 

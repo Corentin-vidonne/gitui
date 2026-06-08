@@ -55,6 +55,12 @@ export const api = {
   submitPlan: (path: string, from: string | null) =>
     invoke<SubmitStepInfo[]>("submit_plan", { path, from }),
   sync: (path: string) => invoke<RepoView>("sync", { path }),
+  mergePr: (
+    path: string,
+    number: number,
+    method: "squash" | "merge" | "rebase",
+    deleteBranch: boolean
+  ) => invoke<RepoView>("merge_pr", { path, number, method, deleteBranch }),
   undo: (path: string) => invoke<RepoView>("undo", { path }),
   undoPeek: (path: string) => invoke<string | null>("undo_peek", { path }),
   listStashes: (path: string) => invoke<StashEntry[]>("list_stashes", { path }),

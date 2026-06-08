@@ -42,6 +42,7 @@ pub fn run() {
             commands::submit,
             commands::submit_plan,
             commands::sync,
+            commands::merge_pr,
             commands::undo,
             commands::undo_peek,
             commands::list_stashes,

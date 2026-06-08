@@ -314,6 +314,30 @@ pub fn pr_checks(repo: &Path, number: u64) -> Result<Vec<CheckRun>> {
         .collect())
 }
 
+/// Merge a pull request via `gh pr merge`. `method` is "squash" | "merge" | "rebase"
+/// (mapped to the matching flag, which also makes gh run non-interactively). When
+/// `delete_branch` is set, gh also deletes the head branch (remote + local) — callers
+/// should leave it off when child PRs are still stacked on the head. gh enforces branch
+/// protection / mergeability itself and exits non-zero with a message we surface.
+pub fn merge_pr(repo: &Path, number: u64, method: &str, delete_branch: bool) -> Result<()> {
+    let method_flag = match method {
+        "squash" => "--squash",
+        "merge" => "--merge",
+        "rebase" => "--rebase",
+        _ => return Err(AppError::new("invalid merge method")),
+    };
+    let num = number.to_string();
+    let mut args: Vec<&str> = vec!["pr", "merge", num.as_str(), method_flag];
+    if delete_branch {
+        args.push("--delete-branch");
+    }
+    let r = proc::run("gh", args, Some(repo))?;
+    if !r.success {
+        return Err(AppError::new(format!("gh pr merge failed: {}", r.stderr.trim())));
+    }
+    Ok(())
+}
+
 /// Head branch names of PRs that have been merged (to clean up landed branches).
 pub fn merged_prs(repo: &Path) -> Vec<String> {
     let r = match proc::run(
@@ -615,6 +639,12 @@ mod tests {
             review_decision: None,
             checks: None,
         }
+    }
+
+    #[test]
+    fn merge_pr_rejects_unknown_method() {
+        // Returns before shelling out to `gh`, so no repo / network is needed.
+        assert!(merge_pr(Path::new("."), 1, "bogus", false).is_err());
     }
 
     #[test]

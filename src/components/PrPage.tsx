@@ -10,9 +10,17 @@ import {
   Check,
   X,
   MessageSquare,
+  AlertTriangle,
 } from "lucide-react";
 import { safeOpen } from "../lib/safeOpen";
-import type { CheckRun, PrDetail, PrReview } from "../lib/types";
+import type { CheckRun, PrDetail, PrReview, RepoView } from "../lib/types";
+
+type MergeMethod = "squash" | "merge" | "rebase";
+const MERGE_METHODS: { id: MergeMethod; label: string; hint: string }[] = [
+  { id: "squash", label: "Squash", hint: "un seul commit sur le tronc (recommandé pour une pile)" },
+  { id: "merge", label: "Commit de merge", hint: "conserve l'historique de la branche" },
+  { id: "rebase", label: "Rebase", hint: "rejoue les commits sur la base" },
+];
 import { api, errorText } from "../lib/api";
 import { CommentList } from "./CommentList";
 import {
@@ -51,15 +59,21 @@ export function PrPage({
   repoPath,
   number,
   aiName,
+  trunk,
   onClose,
   onAnalyze,
+  onMerged,
 }: {
   repoPath: string;
   number: number;
   /** Display name of the active AI engine (Ollama model, or "Claude"). */
   aiName: string;
+  /** The repo's trunk branch, to warn when merging a PR not based on it. */
+  trunk: string | null;
   onClose: () => void;
   onAnalyze: (number: number, mode: string) => void;
+  /** Called with the reconciled repo view after a direct merge succeeds. */
+  onMerged: (view: RepoView) => void;
 }) {
   const [pr, setPr] = useState<PrDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -78,6 +92,12 @@ export function PrPage({
   const [checks, setChecks] = useState<CheckRun[] | null>(null);
   const [loadingChecks, setLoadingChecks] = useState(false);
   const [checksError, setChecksError] = useState<string | null>(null);
+  const [confirmingMerge, setConfirmingMerge] = useState(false);
+  const [mergeMethod, setMergeMethod] = useState<MergeMethod>("squash");
+  const [deleteBranch, setDeleteBranch] = useState(false);
+  const [merging, setMerging] = useState(false);
+  const [mergeError, setMergeError] = useState<string | null>(null);
+  const [mergeNotice, setMergeNotice] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -94,6 +114,11 @@ export function PrPage({
     setReviewActionError(null);
     setChecks(null);
     setChecksError(null);
+    setConfirmingMerge(false);
+    setMerging(false);
+    setMergeError(null);
+    setMergeNotice(null);
+    setDeleteBranch(false);
     api
       .prDetail(repoPath, number)
       .then((d) => {
@@ -164,6 +189,27 @@ export function PrPage({
       setChecksError(errorText(e));
     } finally {
       setLoadingChecks(false);
+    }
+  }
+
+  async function doMerge() {
+    setMerging(true);
+    setMergeError(null);
+    try {
+      const v = await api.mergePr(repoPath, number, mergeMethod, deleteBranch);
+      onMerged(v); // refresh the stack view (children re-parented, restacked)
+      setConfirmingMerge(false);
+      setMergeNotice("PR mergée ✓ — pile resynchronisée.");
+      // Re-fetch so the header flips to MERGED and the Merge button disappears.
+      try {
+        setPr(await api.prDetail(repoPath, number));
+      } catch {
+        /* the merge succeeded; a failed refresh is non-fatal */
+      }
+    } catch (e) {
+      setMergeError(errorText(e));
+    } finally {
+      setMerging(false);
     }
   }
 
@@ -262,13 +308,25 @@ export function PrPage({
             AI Review
           </button>
           {pr?.state === "OPEN" && (
-            <button
-              onClick={() => onAnalyze(number, "merge")}
-              title={`Assistant de merge (${aiName})`}
-              className="inline-flex items-center gap-1.5 rounded-md border border-emerald-700 px-2.5 py-1 text-xs font-medium text-emerald-300 hover:bg-emerald-950/40"
-            >
-              <GitMerge className="h-3.5 w-3.5" /> Aide au merge
-            </button>
+            <>
+              <button
+                onClick={() => {
+                  setMergeError(null);
+                  setConfirmingMerge(true);
+                }}
+                title="Merger cette PR directement (gh pr merge), puis resynchroniser la pile"
+                className="inline-flex items-center gap-1.5 rounded-md bg-emerald-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-emerald-500"
+              >
+                <GitMerge className="h-3.5 w-3.5" /> Merger
+              </button>
+              <button
+                onClick={() => onAnalyze(number, "merge")}
+                title={`Assistant de merge guidé (${aiName})`}
+                className="inline-flex items-center gap-1.5 rounded-md border border-emerald-700 px-2.5 py-1 text-xs font-medium text-emerald-300 hover:bg-emerald-950/40"
+              >
+                <Sparkles className="h-3.5 w-3.5" /> Aide au merge
+              </button>
+            </>
           )}
           {tab === "files" && (
             <div className="ml-auto">
@@ -285,6 +343,11 @@ export function PrPage({
       </div>
 
       {/* Body */}
+      {mergeNotice && (
+        <div className="mx-4 mt-3 flex items-center gap-2 rounded-md border border-emerald-800 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-300">
+          <GitMerge className="h-4 w-4 shrink-0" /> {mergeNotice}
+        </div>
+      )}
       {error && (
         <div className="m-4 rounded-md border border-red-900 bg-red-950/40 px-3 py-2 text-sm text-red-300">
           {error}
@@ -527,6 +590,122 @@ export function PrPage({
               </ul>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Direct-merge confirmation */}
+      {confirmingMerge && pr && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          onClick={() => !merging && setConfirmingMerge(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-lg border border-neutral-700 bg-neutral-900 p-4 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="flex items-center gap-2 text-sm font-medium text-neutral-100">
+              <GitMerge className="h-4 w-4 text-emerald-400" /> Merger la pull request #{number} ?
+            </h3>
+            <p className="mt-1 truncate text-sm text-neutral-300">{pr.title}</p>
+            <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-neutral-400">
+              <span className="font-mono text-neutral-300">{pr.headRef}</span>
+              <span>→</span>
+              <span className="font-mono text-neutral-300">{pr.baseRef}</span>
+              {pr.reviewDecision && <span className="text-neutral-500">· {pr.reviewDecision}</span>}
+              {pr.checks && <span className={ciColor(pr.checks)}>· CI {pr.checks}</span>}
+            </div>
+
+            {trunk && pr.baseRef !== trunk && (
+              <div className="mt-3 flex items-start gap-2 rounded-md border border-amber-800 bg-amber-950/40 px-2.5 py-2 text-xs text-amber-300">
+                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                <span>
+                  Cette PR est empilée sur <span className="font-mono">{pr.baseRef}</span>, pas sur le
+                  tronc <span className="font-mono">{trunk}</span>. Dans une pile, merge les PR parentes
+                  d'abord.
+                </span>
+              </div>
+            )}
+
+            {(pr.checks === "FAILURE" ||
+              pr.reviewDecision === "CHANGES_REQUESTED" ||
+              pr.reviewDecision === "REVIEW_REQUIRED") && (
+              <div className="mt-3 flex items-start gap-2 rounded-md border border-amber-800 bg-amber-950/40 px-2.5 py-2 text-xs text-amber-300">
+                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                <span>CI en échec ou review manquante — GitHub refusera peut-être le merge.</span>
+              </div>
+            )}
+
+            <fieldset className="mt-3 space-y-1.5">
+              <legend className="mb-1 text-xs uppercase tracking-wider text-neutral-500">
+                Méthode
+              </legend>
+              {MERGE_METHODS.map((m) => (
+                <label
+                  key={m.id}
+                  className={`flex cursor-pointer items-start gap-2 rounded-md border px-2.5 py-1.5 ${
+                    mergeMethod === m.id
+                      ? "border-emerald-700 bg-emerald-950/30"
+                      : "border-neutral-800 hover:border-neutral-700"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="merge-method"
+                    className="mt-0.5 accent-emerald-500"
+                    checked={mergeMethod === m.id}
+                    onChange={() => setMergeMethod(m.id)}
+                  />
+                  <span>
+                    <span className="text-xs font-medium text-neutral-200">{m.label}</span>
+                    <span className="block text-[11px] text-neutral-500">{m.hint}</span>
+                  </span>
+                </label>
+              ))}
+            </fieldset>
+
+            <label className="mt-3 flex cursor-pointer items-start gap-2 text-xs text-neutral-300">
+              <input
+                type="checkbox"
+                className="mt-0.5 accent-emerald-500"
+                checked={deleteBranch}
+                onChange={(e) => setDeleteBranch(e.target.checked)}
+              />
+              <span>
+                Supprimer la branche distante après le merge
+                <span className="block text-[11px] text-neutral-500">
+                  À laisser décoché tant que des PR enfants sont empilées sur cette branche.
+                </span>
+              </span>
+            </label>
+
+            {mergeError && (
+              <div className="mt-3 rounded-md border border-red-900 bg-red-950/40 px-2.5 py-2 text-xs text-red-300">
+                {mergeError}
+              </div>
+            )}
+
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                onClick={() => setConfirmingMerge(false)}
+                disabled={merging}
+                className="rounded-md border border-neutral-700 px-3 py-1 text-xs text-neutral-300 hover:bg-neutral-800 disabled:opacity-50"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={doMerge}
+                disabled={merging}
+                className="inline-flex items-center gap-1.5 rounded-md bg-emerald-600 px-3 py-1 text-xs font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
+              >
+                {merging ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <GitMerge className="h-3.5 w-3.5" />
+                )}
+                Merger
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
