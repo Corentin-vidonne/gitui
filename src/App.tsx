@@ -75,6 +75,7 @@ import { WelcomeScreen } from "./components/WelcomeScreen";
 import { Tour, type GuideStep } from "./components/Tour";
 import { Spinner } from "./components/Spinner";
 import { AppUpdateBanner } from "./components/AppUpdateBanner";
+import { WhatsNewDialog } from "./components/WhatsNewDialog";
 import {
   loadSettings,
   saveSettings,
@@ -1533,6 +1534,7 @@ export default function App() {
         />
       )}
       <AppUpdateBanner />
+      <WhatsNewDialog />
       {toast && (
         <div className="fixed bottom-4 right-4 z-50 rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 shadow-lg">
           {toast}
