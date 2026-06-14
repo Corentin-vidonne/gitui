@@ -116,7 +116,55 @@ where
     for (k, v) in envs {
         cmd.env(k, v);
     }
-    let output = cmd.output()?;
+
+    // Mirror the command into the in-app command log. `cmd.args(args)` above consumed the
+    // generic `args` iterator, so read the resolved argv back off the built `Command`. This
+    // is a no-op unless the log is wired up (lib.rs `.setup`) and the command is a mutating
+    // "action" — read-only polling is filtered out by `cmdlog::is_action`.
+    let program_s = cmd.get_program().to_string_lossy().into_owned();
+    let args_s: Vec<String> = cmd
+        .get_args()
+        .map(|a| a.to_string_lossy().into_owned())
+        .collect();
+    let cwd_s = cwd.map(|p| p.to_string_lossy().into_owned());
+    let started_ms = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis() as u64;
+    let log_id = crate::cmdlog::started(&program_s, &args_s, cwd_s.as_deref(), started_ms);
+    let t0 = std::time::Instant::now();
+
+    let result = cmd.output();
+
+    if let Some(id) = log_id {
+        let duration_ms = t0.elapsed().as_millis() as u64;
+        match &result {
+            Ok(o) => crate::cmdlog::finished(
+                id,
+                &program_s,
+                &args_s,
+                cwd_s.as_deref(),
+                started_ms,
+                duration_ms,
+                o.status.code(),
+                o.status.success(),
+                None,
+            ),
+            Err(e) => crate::cmdlog::finished(
+                id,
+                &program_s,
+                &args_s,
+                cwd_s.as_deref(),
+                started_ms,
+                duration_ms,
+                None,
+                false,
+                Some(e.to_string()),
+            ),
+        }
+    }
+
+    let output = result?;
     Ok(Run {
         success: output.status.success(),
         code: output.status.code(),

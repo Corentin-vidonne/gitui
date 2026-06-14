@@ -1,5 +1,6 @@
 mod assist;
 mod chat;
+mod cmdlog;
 mod commands;
 mod diff;
 mod docs;
@@ -42,6 +43,12 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .manage(term::Terminals::default())
         .manage(chat::ChatSessions::default())
+        .setup(|app| {
+            // Wire the in-app command log to the running app so `proc::run_env` can stream
+            // every mutating git/gh command to the `CommandLogDock`.
+            cmdlog::init(app.handle().clone());
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             commands::health,
             commands::set_ai_backend,

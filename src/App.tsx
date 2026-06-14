@@ -30,6 +30,7 @@ import {
   Archive,
   Keyboard,
   AlertTriangle,
+  TerminalSquare,
 } from "lucide-react";
 import { api, errorText } from "./lib/api";
 import { notify as sendDesktopNotification } from "./lib/notify";
@@ -55,6 +56,7 @@ import { SubmitDialog } from "./components/SubmitDialog";
 import { RepoGraphView } from "./components/RepoGraphView";
 import { TerminalDock, type AnalyzeTarget } from "./components/TerminalDock";
 import { ChatDock } from "./components/ChatDock";
+import { CommandLogDock } from "./components/CommandLogDock";
 import { PrPage } from "./components/PrPage";
 import { IssuesList } from "./components/IssuesList";
 import { IssueDetailPanel } from "./components/IssueDetailPanel";
@@ -194,6 +196,7 @@ export default function App() {
   const [showPalette, setShowPalette] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [showCmdLog, setShowCmdLog] = useState(false);
   const [showDeps, setShowDeps] = useState(false);
   const [showWelcome, setShowWelcome] = useState(() => !hasSeenWelcome());
   const [guideSteps, setGuideSteps] = useState<GuideStep[] | null>(null);
@@ -664,6 +667,13 @@ export default function App() {
         run: () => setShowStash(true),
       },
       {
+        id: "a-cmdlog",
+        group: "Actions",
+        label: "Journal des commandes",
+        icon: <TerminalSquare className="h-4 w-4" />,
+        run: () => setShowCmdLog(true),
+      },
+      {
         id: "a-claude",
         group: "Actions",
         label: `Demander à ${aiName}`,
@@ -1101,6 +1111,17 @@ export default function App() {
                 </button>
                 {isModern && <div className="mx-0.5 h-5 w-px bg-neutral-800" />}
                 <button
+                  onClick={() => setShowCmdLog((v) => !v)}
+                  title="Journal des commandes : voir les commandes git/gh exécutées par l'app"
+                  className={
+                    showCmdLog
+                      ? "rounded bg-indigo-950/40 p-1.5 text-indigo-300"
+                      : "rounded p-1.5 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100"
+                  }
+                >
+                  <TerminalSquare className="h-4 w-4" />
+                </button>
+                <button
                   onClick={() =>
                     selected &&
                     api.openInVscode(selected).catch((e) => setError(errorText(e)))
@@ -1371,6 +1392,8 @@ export default function App() {
               onClose={() => setTerminal(null)}
             />
           ))}
+
+        {showCmdLog && <CommandLogDock onClose={() => setShowCmdLog(false)} />}
       </main>
 
       {dialog?.type === "new" && view && (
