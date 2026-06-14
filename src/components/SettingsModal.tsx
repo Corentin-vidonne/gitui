@@ -13,35 +13,47 @@ import {
 import type { Settings } from "../lib/settings";
 import { useTheme, type ThemeName } from "../lib/theme";
 import { api, errorText } from "../lib/api";
+import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
+import {
+  LANGS,
+  loadLangPref,
+  setLangPref,
+  detectMachineLang,
+  type LangPref,
+} from "../lib/i18n";
 
 // Live preview swatches per theme: [background, surface/border, accent]. These
 // are intentionally literal hex values — they illustrate each theme's palette.
-const THEME_OPTIONS: {
+const THEME_OPTIONS = (
+  t: TFunction
+): {
   value: ThemeName;
   label: string;
   hint: string;
   swatch: [string, string, string];
-}[] = [
+}[] => [
   {
     value: "classic",
-    label: "Classique",
-    hint: "Sombre neutre · indigo",
+    label: t("settingsModal.themes.classic.label"),
+    hint: t("settingsModal.themes.classic.hint"),
     swatch: ["#0a0a0a", "#262626", "#4f46e5"],
   },
   {
     value: "modern",
-    label: "Modern",
-    hint: "Bleu-encre · teal",
+    label: t("settingsModal.themes.modern.label"),
+    hint: t("settingsModal.themes.modern.hint"),
     swatch: ["#0b0d12", "#232a38", "#14b8a6"],
   },
 ];
 
-const TABS = [
-  { id: "general", label: "Général", Icon: SlidersHorizontal },
-  { id: "ai", label: "IA", Icon: Sparkles },
-  { id: "about", label: "Aide", Icon: HelpCircle },
-] as const;
-type TabId = (typeof TABS)[number]["id"];
+const TABS = (t: TFunction) =>
+  [
+    { id: "general", label: t("settingsModal.tabs.general"), Icon: SlidersHorizontal },
+    { id: "ai", label: t("settingsModal.tabs.ai"), Icon: Sparkles },
+    { id: "about", label: t("settingsModal.tabs.about"), Icon: HelpCircle },
+  ] as const;
+type TabId = ReturnType<typeof TABS>[number]["id"];
 
 export function SettingsModal({
   settings,
@@ -56,8 +68,21 @@ export function SettingsModal({
   onOpenHelp: () => void;
   onOpenDeps: () => void;
 }) {
+  const { t } = useTranslation();
   const { theme, setTheme } = useTheme();
   const [tab, setTab] = useState<TabId>("general");
+  // Language applies live (like the theme), independently of Save.
+  const [langPref, setLangPrefState] = useState<LangPref>(loadLangPref);
+  const tabs = TABS(t);
+  const themeOptions = THEME_OPTIONS(t);
+  const detectedLabel =
+    LANGS.find((l) => l.code === detectMachineLang())?.label ?? "English";
+
+  function changeLang(pref: LangPref) {
+    setLangPrefState(pref);
+    setLangPref(pref); // persists, applies live, and syncs the backend prompt language
+  }
+
   const [pollSec, setPollSec] = useState(Math.round(settings.pollIntervalMs / 1000));
   const [notifications, setNotifications] = useState(settings.notifications);
   const [assistantUi, setAssistantUi] = useState(settings.assistantUi);
@@ -86,7 +111,7 @@ export function SettingsModal({
       setModels(list);
       if (list.length && !list.includes(ollamaModel)) setOllamaModel(list[0]);
       if (!list.length)
-        setDetectErr("Aucun modèle — `ollama pull qwen3-coder` (local) ou `ollama launch claude` (cloud).");
+        setDetectErr(t("settingsModal.ai.ollama.noModels"));
     } catch (e) {
       setModels([]);
       setDetectErr(errorText(e));
@@ -128,7 +153,7 @@ export function SettingsModal({
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-4">
-          <h2 className="text-sm font-semibold text-neutral-100">Réglages</h2>
+          <h2 className="text-sm font-semibold text-neutral-100">{t("settingsModal.title")}</h2>
           <button
             onClick={onClose}
             className="rounded p-1 text-neutral-500 hover:bg-neutral-800 hover:text-neutral-200"
@@ -139,18 +164,18 @@ export function SettingsModal({
 
         {/* Tabs */}
         <div className="mt-2 flex gap-1 border-b border-neutral-800 px-3">
-          {TABS.map((t) => (
+          {tabs.map((tabItem) => (
             <button
-              key={t.id}
+              key={tabItem.id}
               type="button"
-              onClick={() => setTab(t.id)}
+              onClick={() => setTab(tabItem.id)}
               className={`flex items-center gap-1.5 border-b-2 px-3 py-2 text-xs font-medium transition-colors ${
-                tab === t.id
+                tab === tabItem.id
                   ? "border-indigo-500 text-neutral-100"
                   : "border-transparent text-neutral-500 hover:text-neutral-300"
               }`}
             >
-              <t.Icon className="h-3.5 w-3.5" /> {t.label}
+              <tabItem.Icon className="h-3.5 w-3.5" /> {tabItem.label}
             </button>
           ))}
         </div>
@@ -161,10 +186,33 @@ export function SettingsModal({
             <>
               <div>
                 <label className="mb-1.5 block text-xs font-medium text-neutral-300">
-                  Apparence
+                  {t("settingsModal.general.language")}
+                </label>
+                <select
+                  value={langPref}
+                  onChange={(e) => changeLang(e.target.value as LangPref)}
+                  className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 outline-none focus:border-indigo-600"
+                >
+                  <option value="auto">
+                    {t("settingsModal.general.languageAuto", { lang: detectedLabel })}
+                  </option>
+                  {LANGS.map((l) => (
+                    <option key={l.code} value={l.code}>
+                      {l.label}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-[10px] text-neutral-500">
+                  {t("settingsModal.general.languageHint")}
+                </p>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-neutral-300">
+                  {t("settingsModal.general.appearance")}
                 </label>
                 <div className="grid grid-cols-2 gap-2">
-                  {THEME_OPTIONS.map((opt) => {
+                  {themeOptions.map((opt) => {
                     const active = theme === opt.value;
                     return (
                       <button
@@ -196,13 +244,13 @@ export function SettingsModal({
                   })}
                 </div>
                 <p className="mt-1 text-[10px] text-neutral-500">
-                  S'applique immédiatement. Le thème classique reste disponible à tout moment.
+                  {t("settingsModal.general.appearanceHint")}
                 </p>
               </div>
 
               <div>
                 <label className="mb-1 block text-xs font-medium text-neutral-300">
-                  Intervalle de sondage (secondes)
+                  {t("settingsModal.general.pollInterval")}
                 </label>
                 <input
                   type="number"
@@ -213,7 +261,7 @@ export function SettingsModal({
                   className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 outline-none focus:border-indigo-600"
                 />
                 <p className="mt-1 text-[10px] text-neutral-500">
-                  Fréquence à laquelle gitui cherche commits, PRs et issues. Minimum 30s.
+                  {t("settingsModal.general.pollIntervalHint")}
                 </p>
               </div>
 
@@ -224,7 +272,7 @@ export function SettingsModal({
                   onChange={(e) => setNotifications(e.target.checked)}
                   className="accent-indigo-600"
                 />
-                Notifications bureau pour la nouvelle activité
+                {t("settingsModal.general.notifications")}
               </label>
             </>
           )}
@@ -233,13 +281,13 @@ export function SettingsModal({
             <>
               <div>
                 <label className="mb-1.5 block text-xs font-medium text-neutral-300">
-                  Interface assistant (Summary / Detailed)
+                  {t("settingsModal.ai.assistantUi.label")}
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   {(
                     [
-                      { value: "chat", label: "Chat", hint: "Bulles de conversation" },
-                      { value: "terminal", label: "Terminal", hint: "Terminal Claude brut" },
+                      { value: "chat", label: t("settingsModal.ai.assistantUi.chat"), hint: t("settingsModal.ai.assistantUi.chatHint") },
+                      { value: "terminal", label: t("settingsModal.ai.assistantUi.terminal"), hint: t("settingsModal.ai.assistantUi.terminalHint") },
                     ] as const
                   ).map((opt) => {
                     const active = assistantUi === opt.value;
@@ -264,8 +312,7 @@ export function SettingsModal({
                   })}
                 </div>
                 <p className="mt-1 text-[10px] text-neutral-500">
-                  Le chat parle à Claude sans afficher le terminal. En mode chat, les merges
-                  demandent une autorisation avant chaque commande qui écrit.
+                  {t("settingsModal.ai.assistantUi.hint")}
                 </p>
               </div>
 
@@ -281,19 +328,19 @@ export function SettingsModal({
                   onChange={(e) => setChatStreaming(e.target.checked)}
                   className="accent-indigo-600"
                 />
-                Réponse progressive (effet machine à écrire)
+                {t("settingsModal.ai.chatStreaming")}
               </label>
 
               {/* AI backend: Anthropic cloud vs local Ollama (both drive the `claude` CLI). */}
               <div>
                 <label className="mb-1.5 block text-xs font-medium text-neutral-300">
-                  Backend IA (moteur de claude)
+                  {t("settingsModal.ai.backend.label")}
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   {(
                     [
-                      { value: "anthropic", label: "Claude (cloud)", hint: "API Anthropic · ton login", Icon: Cloud },
-                      { value: "ollama", label: "Ollama (local)", hint: "Modèles locaux, gratuits", Icon: Server },
+                      { value: "anthropic", label: t("settingsModal.ai.backend.anthropic"), hint: t("settingsModal.ai.backend.anthropicHint"), Icon: Cloud },
+                      { value: "ollama", label: t("settingsModal.ai.backend.ollama"), hint: t("settingsModal.ai.backend.ollamaHint"), Icon: Server },
                     ] as const
                   ).map((opt) => {
                     const active = aiBackend === opt.value;
@@ -323,12 +370,12 @@ export function SettingsModal({
                 {aiBackend === "anthropic" && (
                   <div className="mt-2 space-y-2 rounded-lg border border-neutral-800 bg-neutral-900/60 p-2.5">
                     <div>
-                      <label className="mb-1 block text-[11px] text-neutral-400">Modèle</label>
+                      <label className="mb-1 block text-[11px] text-neutral-400">{t("settingsModal.ai.model")}</label>
                       <input
                         list="anthropic-models"
                         value={anthropicModel}
                         onChange={(e) => setAnthropicModel(e.target.value)}
-                        placeholder="défaut du compte"
+                        placeholder={t("settingsModal.ai.anthropic.modelPlaceholder")}
                         className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-2.5 py-1.5 text-sm text-neutral-100 outline-none focus:border-indigo-600"
                       />
                       <datalist id="anthropic-models">
@@ -339,10 +386,11 @@ export function SettingsModal({
                       </datalist>
                     </div>
                     <p className="text-[10px] leading-relaxed text-neutral-500">
-                      Alias (<code className="text-neutral-400">sonnet</code>,{" "}
+                      {t("settingsModal.ai.anthropic.modelHintPre")}{" "}
+                      <code className="text-neutral-400">sonnet</code>,{" "}
                       <code className="text-neutral-400">opus</code>,{" "}
-                      <code className="text-neutral-400">haiku</code>) ou nom complet. Vide =
-                      modèle par défaut de ton compte Claude.
+                      <code className="text-neutral-400">haiku</code>
+                      {t("settingsModal.ai.anthropic.modelHintPost")}
                     </p>
                   </div>
                 )}
@@ -350,7 +398,7 @@ export function SettingsModal({
                 {aiBackend === "ollama" && (
                   <div className="mt-2 space-y-2 rounded-lg border border-neutral-800 bg-neutral-900/60 p-2.5">
                     <div>
-                      <label className="mb-1 block text-[11px] text-neutral-400">Hôte Ollama</label>
+                      <label className="mb-1 block text-[11px] text-neutral-400">{t("settingsModal.ai.ollama.host")}</label>
                       <input
                         value={ollamaHost}
                         onChange={(e) => setOllamaHost(e.target.value)}
@@ -360,7 +408,7 @@ export function SettingsModal({
                     </div>
                     <div>
                       <div className="mb-1 flex items-center justify-between">
-                        <label className="text-[11px] text-neutral-400">Modèle</label>
+                        <label className="text-[11px] text-neutral-400">{t("settingsModal.ai.model")}</label>
                         <button
                           type="button"
                           onClick={detectModels}
@@ -368,7 +416,7 @@ export function SettingsModal({
                           className="inline-flex items-center gap-1 rounded border border-neutral-700 px-1.5 py-0.5 text-[10px] text-neutral-300 hover:bg-neutral-800 disabled:opacity-50"
                         >
                           <RefreshCw className={`h-3 w-3 ${detecting ? "animate-spin" : ""}`} />
-                          Détecter
+                          {t("settingsModal.ai.ollama.detect")}
                         </button>
                       </div>
                       <input
@@ -387,16 +435,20 @@ export function SettingsModal({
                         <p className="mt-1 text-[10px] text-amber-400">{detectErr}</p>
                       ) : models.length > 0 ? (
                         <p className="mt-1 text-[10px] text-neutral-500">
-                          {models.length} modèle(s) détecté(s).
+                          {t("settingsModal.ai.ollama.detected", { count: models.length })}
                         </p>
                       ) : null}
                     </div>
                     <p className="text-[10px] leading-relaxed text-neutral-500">
-                      La CLI <code className="text-neutral-400">claude</code> reste requise (c'est le
-                      moteur) ; Ollama fournit juste le modèle — local (
-                      <code className="text-neutral-400">ollama pull qwen3-coder</code>) ou cloud (
-                      <code className="text-neutral-400">ollama launch claude</code>, modèles{" "}
-                      <code className="text-neutral-400">:cloud</code>).
+                      {t("settingsModal.ai.ollama.hintPre")}{" "}
+                      <code className="text-neutral-400">claude</code>
+                      {t("settingsModal.ai.ollama.hintMid")}{" "}
+                      <code className="text-neutral-400">ollama pull qwen3-coder</code>
+                      {t("settingsModal.ai.ollama.hintMid2")}{" "}
+                      <code className="text-neutral-400">ollama launch claude</code>
+                      {t("settingsModal.ai.ollama.hintMid3")}{" "}
+                      <code className="text-neutral-400">:cloud</code>
+                      {t("settingsModal.ai.ollama.hintPost")}
                     </p>
                   </div>
                 )}
@@ -407,21 +459,21 @@ export function SettingsModal({
           {tab === "about" && (
             <>
               <p className="text-xs text-neutral-400">
-                Documentation, guide interactif et vérification de l'environnement.
+                {t("settingsModal.about.intro")}
               </p>
               <button
                 onClick={onOpenHelp}
                 className="flex w-full items-center gap-2 rounded-lg border border-indigo-700/60 bg-indigo-950/30 px-3 py-2 text-sm text-indigo-200 hover:bg-indigo-950/50"
               >
                 <HelpCircle className="h-4 w-4 shrink-0" />
-                Tout ce que fait l'app — et guide interactif
+                {t("settingsModal.about.help")}
               </button>
               <button
                 onClick={onOpenDeps}
                 className="flex w-full items-center gap-2 rounded-lg border border-neutral-700 bg-neutral-800/40 px-3 py-2 text-sm text-neutral-200 hover:bg-neutral-800"
               >
                 <Wrench className="h-4 w-4 shrink-0" />
-                Vérifier les outils (git, gh, Claude Code)
+                {t("settingsModal.about.checkTools")}
               </button>
             </>
           )}
@@ -433,13 +485,13 @@ export function SettingsModal({
             onClick={onClose}
             className="rounded-md px-3 py-1.5 text-sm text-neutral-400 hover:bg-neutral-800"
           >
-            Annuler
+            {t("common.cancel")}
           </button>
           <button
             onClick={save}
             className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500"
           >
-            Enregistrer
+            {t("common.save")}
           </button>
         </div>
       </div>

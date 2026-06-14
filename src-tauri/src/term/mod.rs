@@ -112,7 +112,7 @@ pub fn term_open_analyze(
 ) -> Result<()> {
     let root = git::repo_root(Path::new(&path))?;
     let repo = Path::new(&root);
-    let prompt = assist::analysis_prompt(repo, &sha, &mode)?;
+    let prompt = assist::analysis_prompt(repo, &sha, &mode, assist::ui_lang())?;
     spawn_claude_session(&app, &state, id, repo, &prompt, cols, rows)
 }
 
@@ -131,8 +131,14 @@ pub fn term_open_analyze_pr(
     let root = git::repo_root(Path::new(&path))?;
     let repo = Path::new(&root);
     let detail = crate::github::pr_detail(repo, number)?;
-    let prompt =
-        assist::pr_analysis_prompt(number, &detail.title, &detail.head_ref, &detail.base_ref, &mode);
+    let prompt = assist::pr_analysis_prompt(
+        number,
+        &detail.title,
+        &detail.head_ref,
+        &detail.base_ref,
+        &mode,
+        assist::ui_lang(),
+    );
     spawn_claude_session(&app, &state, id, repo, &prompt, cols, rows)
 }
 
@@ -160,6 +166,7 @@ pub fn term_open_merge_assist(
         &detail.head_ref,
         &detail.base_ref,
         &trunk,
+        assist::ui_lang(),
     );
     spawn_claude_session(&app, &state, id, repo, &prompt, cols, rows)
 }
@@ -184,7 +191,7 @@ pub fn term_open_merge_branches(
     let repo = Path::new(&root);
     let raw = git::local_branches(repo)?;
     let trunk = git::trunk(repo, &raw);
-    let prompt = assist::branch_merge_prompt(&source, &target, &trunk);
+    let prompt = assist::branch_merge_prompt(&source, &target, &trunk, assist::ui_lang());
     spawn_claude_session(&app, &state, id, repo, &prompt, cols, rows)
 }
 

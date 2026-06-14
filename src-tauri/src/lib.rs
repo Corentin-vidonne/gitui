@@ -52,6 +52,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::health,
             commands::set_ai_backend,
+            commands::set_ui_language,
             commands::ollama_models,
             commands::get_repo_view,
             commands::clone_repo,

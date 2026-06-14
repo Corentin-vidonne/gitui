@@ -1,5 +1,7 @@
 import { Fragment, useMemo, useState } from "react";
 import { ChevronRight, ChevronDown } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 
 /** A changed file for the tree (status optional — PRs don't expose it). */
 export type ChangedFile = { path: string; status?: string };
@@ -48,6 +50,7 @@ export function DiffViewToggle({
   value: DiffViewMode;
   onChange: (v: DiffViewMode) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="flex shrink-0 rounded-md border border-neutral-700 p-0.5 text-[11px]">
       {(["unified", "split"] as const).map((m) => (
@@ -60,7 +63,7 @@ export function DiffViewToggle({
               : "text-neutral-400 hover:text-neutral-200"
           }`}
         >
-          {m === "unified" ? "Unifié" : "Côte à côte"}
+          {m === "unified" ? t("diffExplorer.viewMode.unified") : t("diffExplorer.viewMode.split")}
         </button>
       ))}
     </div>
@@ -95,8 +98,12 @@ const SEVS = ["critical", "warning", "info"] as const;
 function normSev(s: string): string {
   return s === "critical" || s === "warning" ? s : "info";
 }
-function sevLabel(s: string): string {
-  return s === "critical" ? "Critique" : s === "warning" ? "Avert." : "Info";
+function sevLabel(s: string, t: TFunction): string {
+  return s === "critical"
+    ? t("diffExplorer.severity.critical")
+    : s === "warning"
+    ? t("diffExplorer.severity.warning")
+    : t("diffExplorer.severity.info");
 }
 
 function AnnotationCard({ f }: { f: DiffFinding }) {
@@ -184,6 +191,7 @@ function TreeView({
   onToggle: (path: string) => void;
   onSelect: (path: string) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <>
       {nodes.map((n) =>
@@ -234,7 +242,7 @@ function TreeView({
                 className={`shrink-0 rounded-full px-1.5 text-[9px] font-semibold ${sevPill(
                   counts[n.path].sev
                 )}`}
-                title={`${counts[n.path].n} remarque(s) IA`}
+                title={t("diffExplorer.aiNotesCount", { count: counts[n.path].n })}
               >
                 {counts[n.path].n}
               </span>
@@ -623,6 +631,7 @@ export function DiffExplorer({
   /** AI-review findings to annotate inline + badge in the tree. */
   findings?: DiffFinding[];
 }) {
+  const { t } = useTranslation();
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const tree = useMemo(() => buildTree(files), [files]);
   const chunk = selected ? diffByFile[selected] ?? "" : "";
@@ -696,13 +705,17 @@ export function DiffExplorer({
     <div className="flex min-h-0 flex-1 flex-col">
       {findings.length > 0 && (
         <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-neutral-800 bg-neutral-900/30 px-3 py-1.5 text-[11px]">
-          <span className="text-neutral-500">Remarques IA :</span>
+          <span className="text-neutral-500">{t("diffExplorer.aiNotes")}</span>
           {SEVS.map((s) =>
             sevCounts[s] > 0 ? (
               <button
                 key={s}
                 onClick={() => toggleSev(s)}
-                title={activeSev.has(s) ? `Masquer « ${sevLabel(s)} »` : `Afficher « ${sevLabel(s)} »`}
+                title={
+                  activeSev.has(s)
+                    ? t("diffExplorer.hideSeverity", { label: sevLabel(s, t) })
+                    : t("diffExplorer.showSeverity", { label: sevLabel(s, t) })
+                }
                 className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 ${
                   activeSev.has(s)
                     ? `border-transparent ${sevPill(s)}`
@@ -710,21 +723,23 @@ export function DiffExplorer({
                 }`}
               >
                 <span className={`h-1.5 w-1.5 rounded-full ${sevDot(s)}`} />
-                {sevLabel(s)} {sevCounts[s]}
+                {sevLabel(s, t)} {sevCounts[s]}
               </button>
             ) : null
           )}
           <span className="ml-auto text-neutral-600">
-            {shown.length}/{findings.length} affichée(s)
+            {t("diffExplorer.shownCount", { shown: shown.length, total: findings.length })}
           </span>
         </div>
       )}
       <div className="flex min-h-0 flex-1">
         <aside className="w-64 shrink-0 overflow-auto border-r border-neutral-800 py-2">
         <div className="px-3 pb-2 text-[10px] uppercase tracking-wider text-neutral-500">
-          {files.length} fichier(s)
+          {t("diffExplorer.fileCount", { count: files.length })}
         </div>
-        {files.length === 0 && <p className="px-3 text-xs text-neutral-600">Aucun changement.</p>}
+        {files.length === 0 && (
+          <p className="px-3 text-xs text-neutral-600">{t("diffExplorer.noChanges")}</p>
+        )}
         <TreeView
           nodes={tree}
           depth={0}
@@ -762,13 +777,13 @@ export function DiffExplorer({
             ) : (
               loose.length === 0 && (
                 <p className="text-xs text-neutral-600">
-                  Pas de diff texte pour ce fichier (binaire ou renommage).
+                  {t("diffExplorer.noTextDiff")}
                 </p>
               )
             )}
           </>
         ) : (
-          <p className="text-xs text-neutral-600">Sélectionne un fichier à gauche.</p>
+          <p className="text-xs text-neutral-600">{t("diffExplorer.selectFile")}</p>
         )}
         </div>
       </div>

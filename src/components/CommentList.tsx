@@ -1,5 +1,7 @@
 import { MessageSquare } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import type { Comment, Review } from "../lib/types";
+import i18n from "../lib/i18n";
 
 function reviewColor(state: string): string {
   if (state === "APPROVED") return "text-emerald-400";
@@ -7,10 +9,10 @@ function reviewColor(state: string): string {
   return "text-neutral-400";
 }
 function reviewLabel(state: string): string {
-  if (state === "APPROVED") return "approved";
-  if (state === "CHANGES_REQUESTED") return "requested changes";
-  if (state === "COMMENTED") return "commented";
-  if (state === "DISMISSED") return "dismissed";
+  if (state === "APPROVED") return i18n.t("commentList.review.approved");
+  if (state === "CHANGES_REQUESTED") return i18n.t("commentList.review.changesRequested");
+  if (state === "COMMENTED") return i18n.t("commentList.review.commented");
+  if (state === "DISMISSED") return i18n.t("commentList.review.dismissed");
   return state.toLowerCase();
 }
 function when(iso: string): string {
@@ -28,6 +30,7 @@ function Bubble({
   metaClass?: string;
   body: string;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="rounded-md border border-neutral-800 bg-neutral-950/50 p-2">
       <div className="mb-1 flex items-center gap-2 text-xs">
@@ -39,7 +42,7 @@ function Bubble({
           {body}
         </pre>
       ) : (
-        <span className="text-xs italic text-neutral-600">(no message)</span>
+        <span className="text-xs italic text-neutral-600">{t("commentList.noMessage")}</span>
       )}
     </div>
   );
@@ -53,13 +56,14 @@ export function CommentList({
   comments: Comment[];
   reviews?: Review[];
 }) {
+  const { t } = useTranslation();
   const total = comments.length + reviews.length;
   return (
     <div>
       <h4 className="mb-1 flex items-center gap-1.5 text-xs uppercase tracking-wider text-neutral-500">
-        <MessageSquare className="h-3.5 w-3.5" /> Conversation ({total})
+        <MessageSquare className="h-3.5 w-3.5" /> {t("commentList.conversation", { total })}
       </h4>
-      {total === 0 && <p className="text-xs text-neutral-600">No messages yet.</p>}
+      {total === 0 && <p className="text-xs text-neutral-600">{t("commentList.noMessages")}</p>}
       <div className="space-y-2">
         {reviews.map((r, i) => (
           <Bubble

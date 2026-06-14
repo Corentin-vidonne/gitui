@@ -84,10 +84,24 @@ models that `/api/tags` omits) with `GET <host>/api/tags` (local, via the tiny `
 
 ## Conventions
 
-- French UI copy and French `claude` prompts (the app's audience is French-speaking).
-- New assists follow the existing pattern: a prompt builder in `assist/`, a command in
-  `term/` (interactive) or `commands.rs` (headless), registration in `lib.rs`, an api.ts
-  wrapper / direct `invoke`, and a button wired through the relevant panel.
+- **Internationalized UI** (react-i18next, **fr / en / es / de**). All user-facing copy lives
+  in `src/locales/<lang>.json` and is read via `t("namespace.key")` — `useTranslation()` in
+  components, the exported default `i18n` instance in non-component helpers. `src/lib/i18n.ts`
+  is the setup: the language follows the machine locale (`navigator.language`) by default and
+  is overridable in Settings (persisted as `gitui.lang`, `"auto"` or a code). Keys are grouped
+  by component namespace plus a shared `common.*`; the four catalogs must keep identical key
+  structure. Git/CLI keywords (merge, restack, submit, rebase, push, …) and proper nouns
+  (gitui, Claude, Ollama, GitHub, PR, …) stay untranslated. New UI strings → add a key to all
+  four `locales/*.json` and use `t()`, never a hardcoded literal.
+- **`claude` prompts follow the app language.** The frontend pushes the active language to the
+  backend (`set_ui_language` → `assist::set_ui_lang`); prompt builders take an `assist::Lang`
+  read from `assist::ui_lang()` at the call site. The **visible** seeds (commit / PR analysis,
+  merge assists, repo chat, `chat_merge_note`) are fully translated per language; the
+  **headless** JSON prompts keep their French scaffolding and only steer Claude's *output*
+  language via `Lang::output_name`.
+- New assists follow the existing pattern: a prompt builder in `assist/` (with a `lang: Lang`
+  param), a command in `term/` (interactive) or `commands.rs` (headless), registration in
+  `lib.rs`, an api.ts wrapper / direct `invoke`, and a button wired through the relevant panel.
 - **Cross-platform** (Windows / macOS / Linux): every subprocess goes through `proc::`
   (never a shell). `proc::fix_path_env()` runs once at startup (`lib.rs`) so GUI launches
   on macOS/Linux find `git`/`gh`/`claude` despite not inheriting the login-shell `PATH`

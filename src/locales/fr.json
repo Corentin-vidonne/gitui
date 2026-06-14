@@ -1,0 +1,1041 @@
+{
+  "addRepoDialog": {
+    "title": "Ajouter un dépôt",
+    "pickOpenTitle": "Sélectionner un dépôt git existant",
+    "pickCloneDestTitle": "Choisir l'emplacement où cloner le dépôt",
+    "tabs": {
+      "open": "Ouvrir un dépôt existant",
+      "clone": "Cloner depuis une URL"
+    },
+    "openHint": "Choisissez un dépôt déjà cloné sur votre machine.",
+    "opening": "Ouverture…",
+    "chooseFolder": "Choisir un dossier…",
+    "urlLabel": "URL du dépôt",
+    "cloneIntoLabel": "Cloner dans",
+    "chooseDestination": "Choisir le dossier de destination…",
+    "cloning": "Clonage…",
+    "clone": "Cloner"
+  },
+  "app": {
+    "tour": {
+      "welcomeTitle": "Bienvenue 👋",
+      "welcomeBody": "Petit tour des fonctions principales. Tu peux fermer à tout moment (Échap).",
+      "viewsTitle": "Changer de vue",
+      "viewsBody": "Graphe des branches, commits, arborescence, PRs, issues, docs. (Raccourcis 1–6.)",
+      "stackActionsTitle": "Actions de pile",
+      "stackActionsBody": "Sync met à jour, Restack rebase la pile, Undo annule la dernière opération. (s / r / u)",
+      "newBranchTitle": "Créer une branche",
+      "newBranchBody": "Au sommet de la pile, avec un nom suggéré par l'IA. (n)",
+      "submitTitle": "Publier",
+      "submitBody": "Pousse et ouvre/met à jour les PRs ; description rédigée par l'IA. (p)",
+      "claudeTitle": "Assistant IA",
+      "claudeBody": "Discute du dépôt, génère des messages, relis du code, merge guidé.",
+      "stashTitle": "Stashes",
+      "stashBody": "Vois ce que contient chaque stash, applique-le ou supprime-le.",
+      "doneTitle": "À toi de jouer 🚀",
+      "doneBody": "Ctrl/⌘ + K pour la palette, ? pour les raccourcis. La page d'aide récapitule tout."
+    },
+    "notify": {
+      "newUpdates": "{{count}} nouvelles mises à jour"
+    },
+    "toast": {
+      "synced": "Synced ✓",
+      "undone": "Annulé ✓",
+      "syncedRepos": "Synced {{ok}} dépôt(s) ✓",
+      "syncedReposPartial": "Synced {{ok}}, {{fail}} en échec",
+      "reparented": "{{branch}} → {{newParent}}",
+      "submitted": "Submit terminé — {{summary}}"
+    },
+    "palette": {
+      "groupBranches": "Branches",
+      "groupActions": "Actions",
+      "groupViews": "Vues",
+      "current": "courante",
+      "trunk": "tronc",
+      "undoAction": "Undo : {{label}}",
+      "restackAll": "Restack tout",
+      "newBranch": "Nouvelle branche",
+      "stashes": "Stashes",
+      "commandLog": "Journal des commandes",
+      "askAi": "Demander à {{name}}",
+      "settings": "Paramètres",
+      "shortcuts": "Raccourcis clavier",
+      "help": "Aide / Guide interactif",
+      "viewBranchGraph": "Vue : graphe des branches",
+      "viewCommitGraph": "Vue : graphe des commits",
+      "viewTree": "Vue : arborescence",
+      "viewPrs": "Vue : pull requests",
+      "viewIssues": "Vue : issues",
+      "viewDocs": "Vue : docs Markdown"
+    },
+    "guides": {
+      "viewGraph": {
+        "title": "Graphe des branches",
+        "body": "Voici ta pile. Glisse une branche sur une autre pour la re-parenter ; les pastilles montrent l'état (CI, review, retard…)."
+      },
+      "viewCommits": {
+        "title": "Graphe des commits",
+        "body": "Le DAG des commits. Tape ici pour filtrer par message / sha / auteur."
+      },
+      "commitSearch": {
+        "title": "Recherche de commits",
+        "body": "Tape : les commits non-matchés s'estompent et la vue se recentre sur les résultats."
+      },
+      "commitOps": {
+        "title": "Actions de commit",
+        "body": "Clique un commit → panneau de détail : Summary/Detailed, AI Review, cherry-pick, et au survol reword (IA) / split / drop / squash / move."
+      },
+      "tree": {
+        "title": "Vue arborescence",
+        "body": "La pile en liste. Survole une branche pour ses actions, clique-la pour le détail."
+      },
+      "branchOps": {
+        "title": "Actions de branche",
+        "body": "Survole une branche → checkout, set parent, restack, merge, track/untrack."
+      },
+      "prs": {
+        "title": "Pull requests",
+        "body": "Ouvre une PR : Approuver / Changements / Commenter, checks CI + logs, AI Review (postable en commentaires inline sur la PR)."
+      },
+      "issues": {
+        "title": "Issues",
+        "body": "La liste des issues et leur détail."
+      },
+      "docs": {
+        "title": "Docs",
+        "body": "Les fichiers Markdown du dépôt."
+      },
+      "views": {
+        "title": "Vues",
+        "body": "Clique pour changer de vue (ou les touches 1–6)."
+      },
+      "sync": {
+        "title": "Sync / Restack / Undo",
+        "body": "Sync met à jour, Restack rebase la pile, Undo annule. Clique pour tester."
+      },
+      "newBranch": {
+        "title": "Nouvelle branche",
+        "body": "Clique pour créer une branche (nom suggéré par l'IA)."
+      },
+      "submit": {
+        "title": "Submit",
+        "body": "Pousse et ouvre/met à jour les PRs. Clique pour voir le plan et la description rédigée par l'IA."
+      },
+      "claude": {
+        "title": "Assistant IA",
+        "body": "Clique pour discuter du dépôt avec Claude."
+      },
+      "stash": {
+        "title": "Stashes",
+        "body": "Voici tes stashes : déplie pour voir les fichiers, puis Apply / Pop / Drop."
+      },
+      "palette": {
+        "title": "Palette de commandes",
+        "body": "Tape une branche, une PR, une action… Entrée pour lancer, Échap pour fermer."
+      },
+      "shortcuts": {
+        "title": "Raccourcis clavier",
+        "body": "La liste des raccourcis (tu peux aussi appuyer sur ?)."
+      }
+    },
+    "sidebar": {
+      "tagline": "stacked PRs",
+      "workspace": "Workspace",
+      "repositories": "Dépôts",
+      "newGroup": "Nouveau groupe",
+      "addRepository": "Ajouter un dépôt"
+    },
+    "footer": {
+      "ghNotLoggedIn": "gh : non connecté",
+      "toolsMissing": "Des outils requis manquent — cliquer pour voir",
+      "tools": "outils"
+    },
+    "header": {
+      "settings": "Paramètres",
+      "workspaceTitle": "Workspace — liens entre dépôts",
+      "loading": "Chargement…",
+      "trunk": "trunk : {{trunk}}",
+      "prsUnavailable": "PRs indisponibles",
+      "updatesCount": "{{count}} nouvelles mises à jour sur l'ensemble des dépôts",
+      "checkUpdates": "Vérifier les mises à jour",
+      "stashCount": "{{count}} stash(es)",
+      "stashes": "Stashes",
+      "newBranch": "Nouvelle branche",
+      "submitTitle": "Pousser les branches et ouvrir/mettre à jour les PRs de bas en haut",
+      "submitUnavailable": "Connecte-toi avec gh et ajoute un remote GitHub pour submit",
+      "askAiRepo": "Demander à {{name}} (discuter du dépôt)",
+      "commandLogTitle": "Journal des commandes : voir les commandes git/gh exécutées par l'app",
+      "openInVscode": "Ouvrir le dépôt dans VS Code",
+      "noRepoSelected": "Aucun dépôt sélectionné"
+    },
+    "views": {
+      "branchGraph": "Graphe des branches",
+      "commitGraph": "Graphe des commits",
+      "tree": "Arborescence",
+      "pullRequests": "Pull requests",
+      "issues": "Issues",
+      "markdownDocs": "Docs Markdown"
+    },
+    "actions": {
+      "syncTitle": "Sync : fetch + fast-forward du tronc + nettoyage des PR mergées, puis restack",
+      "restackTitle": "Restack toute la pile sur ses parents",
+      "undoTitle": "Annuler : {{label}}",
+      "nothingToUndo": "Rien à annuler"
+    },
+    "empty": {
+      "noRepoTitle": "Aucun dépôt pour l'instant",
+      "noRepoBody": "Ajoute un dépôt git pour visualiser et gérer tes branches empilées et tes pull requests.",
+      "noRepoBodyClassic": "Ajoute un dépôt git pour voir ta pile de branches.",
+      "addRepository": "Ajouter un dépôt",
+      "loadingRepo": "Chargement de {{name}}…"
+    },
+    "commits": {
+      "searchPlaceholder": "Rechercher un commit…"
+    },
+    "tree": {
+      "untrackedBranches": "Branches non suivies"
+    },
+    "panel": {
+      "dragToResize": "Glisser pour redimensionner"
+    },
+    "group": {
+      "newTitle": "Nouveau groupe",
+      "createAndMove": "Créer et déplacer",
+      "renameTitle": "Renommer le groupe",
+      "rename": "Renommer"
+    }
+  },
+  "appUpdateBanner": {
+    "available": "est disponible",
+    "youHave": "tu as {{version}}",
+    "updateViaPackageManager": "Mets à jour via ton gestionnaire de paquets.",
+    "update": "Mettre à jour",
+    "updating": "Mise à jour…",
+    "download": "Télécharger",
+    "dismiss": "Ignorer"
+  },
+  "branchDetail": {
+    "trunkBadge": "tronc",
+    "rows": {
+      "parent": "Parent",
+      "untracked": "non suivie",
+      "status": "Statut",
+      "aheadBehind": "{{ahead}} en avance · {{behind}} en retard",
+      "base": "Base",
+      "workingTree": "Copie de travail",
+      "uncommitted": "modifications non validées",
+      "clean": "propre",
+      "remote": "Distant",
+      "unpushed": "commits non poussés",
+      "upToDate": "à jour"
+    },
+    "pr": {
+      "heading": "Pull request",
+      "viewDetails": "Voir les détails de la PR",
+      "openOnGithub": "Ouvrir sur GitHub",
+      "none": "Aucune PR pour l'instant."
+    },
+    "commits": {
+      "recent": "Commits récents",
+      "onThisBranch": "Commits sur cette branche",
+      "none": "Aucun commit."
+    },
+    "commitActions": {
+      "reword": "Reword",
+      "split": "Split (découper en deux commits)",
+      "squash": "Squash dans le commit plus ancien",
+      "moveNewer": "Déplacer vers le plus récent",
+      "moveOlder": "Déplacer vers le plus ancien",
+      "drop": "Drop"
+    },
+    "actions": {
+      "checkout": "Checkout",
+      "newBranch": "Nouvelle branche",
+      "merge": "Merge",
+      "publish": "Publish",
+      "restack": "Restack",
+      "setParent": "Définir le parent",
+      "untrack": "Ne plus suivre",
+      "track": "Suivre"
+    },
+    "reword": {
+      "title": "Reword du commit",
+      "generate": "Générer",
+      "simple": "simple",
+      "complet": "complet",
+      "simpleHint": "Message court (≤5 mots), préfixe conventionnel",
+      "completHint": "Message complet (sujet + corps), préfixe conventionnel"
+    },
+    "split": {
+      "title": "Split du commit",
+      "introBefore": "Coche les lignes (ou hunks / fichiers entiers) du",
+      "introFirst": "premier",
+      "introAfter": "commit, bas de pile ; le reste ira dans le second. À la",
+      "analyzing": "Analyse du diff…",
+      "noSplittable": "Aucune ligne découpable (binaire / suppression de fichier). Utilise plutôt drop ou squash.",
+      "checkAll": "Tout cocher",
+      "uncheckAll": "Tout décocher",
+      "ordFirst": "er",
+      "ordSecond": "e",
+      "commitWord": "commit",
+      "wholeFile": "Tout le fichier",
+      "wholeHunk": "Tout le hunk",
+      "msg1Before": "Message du ",
+      "msg1After": "commit (lignes cochées)",
+      "msg2Before": "Message du ",
+      "msg2After": "commit (le reste)",
+      "invalidHint": "Coche au moins une ligne (laisses-en une pour le 2e) et renseigne les deux messages"
+    },
+    "drop": {
+      "title": "Drop du commit",
+      "confirmBefore": "Drop",
+      "confirmAfter": "? Cela réécrit l'historique de la branche."
+    }
+  },
+  "branchDialogs": {
+    "new": {
+      "title": "Nouvelle branche",
+      "nameLabel": "Nom de la branche",
+      "suggestTitle": "Suggérer un nom (IA, depuis tes changements en cours)",
+      "parentLabel": "Parent (base)"
+    },
+    "setParent": {
+      "title": "Définir le parent de {{branch}}",
+      "parentLabel": "Branche parente"
+    },
+    "merge": {
+      "title": "merger des branches",
+      "sourceLabel": "Source (branche à merger)",
+      "targetLabel": "Cible (reçoit le merge)",
+      "sameBranch": "Choisis deux branches différentes.",
+      "submit": "Aide au merge"
+    }
+  },
+  "branchRow": {
+    "uncommitted": {
+      "title": "modifications non validées",
+      "label": "non validé"
+    },
+    "actions": {
+      "checkout": "Basculer sur cette branche (checkout)",
+      "publish": "Publier (push vers origin)",
+      "newChild": "Nouvelle branche au-dessus",
+      "restack": "Restack depuis ici",
+      "setParent": "Définir le parent",
+      "untrack": "Ne plus suivre",
+      "track": "Suivre dans la pile"
+    },
+    "badges": {
+      "push": "commits locaux non poussés vers origin",
+      "behind": "commits en retard sur le parent — restack nécessaire",
+      "ahead": "commits en avance sur le parent"
+    }
+  },
+  "chatDock": {
+    "label": {
+      "repo": "dépôt"
+    },
+    "analyzing": "{{name}} analyse…",
+    "thinking": "{{name}} réfléchit…",
+    "send": "Envoyer (Entrée)",
+    "placeholder": {
+      "ask": "Pose une question à {{name}}…",
+      "starting": "Démarrage de la session…"
+    },
+    "note": {
+      "authorized": "✓ Autorisé : {{command}}",
+      "refused": "✗ Refusé : {{command}}"
+    },
+    "approval": {
+      "title": "Autorisation requise",
+      "prompt": "{{name}} veut exécuter cette commande :",
+      "compoundWarning": "Commande composée (enchaînement détecté). Si tu autorises, {{name}} sera invité à exécuter les commandes une par une — chacune devra être autorisée séparément.",
+      "refuse": "Refuser",
+      "authorize": "Autoriser"
+    }
+  },
+  "commandLogDock": {
+    "title": "Journal des commandes",
+    "subtitle": "commandes git / gh exécutées par l'app",
+    "clear": "Vider le journal",
+    "empty": "Aucune commande pour l'instant. Lance une action (restack, sync, submit…) — les commandes git/gh exécutées apparaîtront ici."
+  },
+  "commandPalette": {
+    "groups": {
+      "pullRequests": "Pull requests",
+      "issues": "Issues"
+    },
+    "searchPlaceholder": "Aller à une branche, PR, issue… ou lancer une action",
+    "noResults": "Aucun résultat"
+  },
+  "commentList": {
+    "review": {
+      "approved": "approuvé",
+      "changesRequested": "modifications demandées",
+      "commented": "commenté",
+      "dismissed": "rejeté"
+    },
+    "noMessage": "(aucun message)",
+    "conversation": "Conversation ({{total}})",
+    "noMessages": "Aucun message pour l'instant."
+  },
+  "commitFilter": {
+    "allBranches": "Toutes les branches",
+    "someBranches": "{{selected}}/{{total}} branches",
+    "showBranches": "Afficher les branches",
+    "all": "Toutes"
+  },
+  "commitGraph": {
+    "empty": "Aucun commit à afficher."
+  },
+  "commitPage": {
+    "backToGraph": "Retour au graphe (Échap)",
+    "summary": "Synthèse",
+    "summaryTitle": "Synthèse rapide ({{ai}})",
+    "detailed": "Détaillé",
+    "detailedTitle": "Analyse détaillée",
+    "review": "AI Review",
+    "reviewTitle": "Relecture IA structurée",
+    "cherryPickTitle": "Appliquer ce commit sur la branche choisie",
+    "reviewing": "Relecture… (~30 s)",
+    "noFindings": "Aucun problème détecté ✓",
+    "findings": "{{count}} remarque(s) — annotées dans le diff, badges dans l'arborescence."
+  },
+  "common": {
+    "cancel": "Annuler",
+    "save": "Enregistrer",
+    "close": "Fermer",
+    "delete": "Supprimer",
+    "remove": "Retirer",
+    "confirm": "Confirmer",
+    "loading": "Chargement…",
+    "error": "Erreur",
+    "retry": "Réessayer",
+    "yes": "Oui",
+    "no": "Non",
+    "ok": "OK",
+    "search": "Rechercher",
+    "copy": "Copier",
+    "copied": "Copié",
+    "back": "Retour",
+    "refresh": "Rafraîchir",
+    "open": "Ouvrir",
+    "none": "Aucun",
+    "edit": "Modifier",
+    "create": "Créer",
+    "apply": "Appliquer",
+    "validate": "Valider",
+    "loadingEllipsis": "Chargement…",
+    "comingSoon": "Bientôt disponible"
+  },
+  "conflictPanel": {
+    "title": "Restack en pause — résolvez les conflits",
+    "onBranch": "sur",
+    "description": {
+      "before": "Corrigez les conflits dans votre éditeur et indexez-les (",
+      "after": "), puis continuez — ou laissez l'IA proposer une résolution par fichier."
+    },
+    "resolveAll": {
+      "title": "Proposer et appliquer une résolution pour chaque fichier en conflit",
+      "label": "Tout résoudre par l'IA ({{count}})"
+    },
+    "resolving": "Résolution…",
+    "suggest": {
+      "title": "Demander à l'IA de résoudre ce fichier",
+      "label": "Suggestion IA"
+    },
+    "retry": "Réessayer",
+    "previewResolved": "Aperçu du fichier résolu",
+    "markersWarning": "La proposition contient encore des marqueurs de conflit — vérifiez manuellement avant d'appliquer.",
+    "markersLeftError": "L'IA a laissé des marqueurs de conflit — résolvez celui-ci manuellement.",
+    "apply": {
+      "title": "Écrire cette résolution et indexer le fichier",
+      "titleMarkers": "La résolution contient encore des marqueurs de conflit",
+      "label": "Appliquer"
+    },
+    "dismiss": "Ignorer",
+    "continueRestack": "Continuer le restack",
+    "abort": "Abandonner"
+  },
+  "dependencyGate": {
+    "tools": {
+      "git": {
+        "desc": "Indispensable : toutes les opérations sur les branches, commits et la pile."
+      },
+      "gh": {
+        "desc": "Pull requests, issues, checks CI et « Submit »."
+      }
+    },
+    "title": {
+      "missing": "Outils requis manquants",
+      "setup": "Configuration des outils"
+    },
+    "intro": {
+      "before": "gitui s'appuie sur ces outils en ligne de commande. Installe ceux qui manquent, puis clique",
+      "after": "."
+    },
+    "install": "Installer",
+    "recheck": "Revérifier",
+    "continue": "Continuer",
+    "claudeNote": "(aides IA) est vérifié au moment où tu lances une fonction IA — pas besoin de l'installer pour le reste de l'app.",
+    "auth": {
+      "title": "GitHub CLI non connecté",
+      "hint": "Connecte-toi pour accéder aux PRs et issues. Lance cette commande dans un terminal :"
+    },
+    "status": {
+      "ready": "Tout est prêt ✨",
+      "missing": "{{count}} outil(s) manquant(s)",
+      "authRequired": "Connexion requise"
+    }
+  },
+  "diffExplorer": {
+    "viewMode": {
+      "unified": "Unifié",
+      "split": "Côte à côte"
+    },
+    "severity": {
+      "critical": "Critique",
+      "warning": "Avert.",
+      "info": "Info"
+    },
+    "aiNotes": "Remarques IA :",
+    "aiNotesCount": "{{count}} remarque(s) IA",
+    "hideSeverity": "Masquer « {{label}} »",
+    "showSeverity": "Afficher « {{label}} »",
+    "shownCount": "{{shown}}/{{total}} affichée(s)",
+    "fileCount": "{{count}} fichier(s)",
+    "noChanges": "Aucun changement.",
+    "noTextDiff": "Pas de diff texte pour ce fichier (binaire ou renommage).",
+    "selectFile": "Sélectionne un fichier à gauche."
+  },
+  "digestBanner": {
+    "header": "Depuis ta dernière visite · {{count}} nouveauté(s)",
+    "summarizing": "Résumé en cours…",
+    "more": "… et {{count}} de plus",
+    "markSeen": "Marquer comme vu",
+    "seen": "Vu",
+    "dismiss": "Masquer pour l'instant"
+  },
+  "docsView": {
+    "new": "Nouveau",
+    "newFileTitle": "Nouveau fichier .md",
+    "noFiles": "Aucun fichier .md.",
+    "pathPlaceholder": "chemin/vers/fichier.md",
+    "commitOnBranch": "Commit sur la branche",
+    "committing": "Commit en cours…",
+    "createAndCommit": "Créer et commit",
+    "contentPlaceholder": "# Titre\n\nÉcrivez du Markdown ici…",
+    "previewPlaceholder": "*Aperçu*",
+    "rendered": "Rendu",
+    "raw": "Source",
+    "emptyState": "Sélectionnez un fichier .md, ou créez-en un nouveau."
+  },
+  "graphNode": {
+    "untracked": "non suivie",
+    "uncommittedChanges": "modifications non validées",
+    "unpushedCommits": "commits non poussés",
+    "ciStatus": "CI {{status}}"
+  },
+  "groupNameDialog": {
+    "placeholder": "Nom du groupe"
+  },
+  "groupSection": {
+    "ungrouped": "Non groupés",
+    "updatesInGroup": "{{count}} nouvelle(s) mise(s) à jour dans ce groupe",
+    "updatesCount": "{{count}} nouvelle(s) mise(s) à jour",
+    "menu": {
+      "actions": "Actions du groupe",
+      "rename": "Renommer",
+      "syncing": "Synchronisation…",
+      "syncGroup": "Synchroniser le groupe",
+      "deleteGroup": "Supprimer le groupe"
+    }
+  },
+  "helpPage": {
+    "test": "Tester",
+    "testTitle": "Lancer un guide pour essayer cette fonction",
+    "headerTitle": "Tout ce que fait gitui",
+    "replayGuide": "Revoir le guide",
+    "intro": {
+      "before": "gitui est un outil de",
+      "stacks": "piles de branches",
+      "middle1": "(stacked PRs). Clique",
+      "middle2": "à côté d'une fonction pour la voir en action dans l'app, ou",
+      "after": "pour le tour général."
+    },
+    "sections": {
+      "views": {
+        "title": "Vues",
+        "branchGraph": {
+          "name": "Graphe des branches",
+          "desc": "l'arbre de la pile ; glisse une branche sur une autre pour la re-parenter"
+        },
+        "commitGraph": {
+          "name": "Graphe des commits",
+          "desc": "le DAG des commits, avec recherche et filtre"
+        },
+        "tree": {
+          "name": "Arbre",
+          "desc": "la pile en liste, avec les actions par branche"
+        },
+        "prs": {
+          "name": "Pull requests",
+          "desc": "liste et détail, relecture, checks CI"
+        },
+        "issues": {
+          "name": "Issues",
+          "desc": "liste et détail des issues"
+        },
+        "docs": {
+          "name": "Docs",
+          "desc": "les fichiers Markdown du dépôt"
+        }
+      },
+      "branches": {
+        "title": "Branches",
+        "newBranch": {
+          "name": "Nouvelle branche",
+          "desc": "au sommet de la pile (nom suggéré par l'IA ✨)"
+        },
+        "branchOps": {
+          "name": "checkout / Définir le parent / Suivre / Ne plus suivre",
+          "desc": "gérer la place dans la pile"
+        },
+        "restack": {
+          "name": "Restack",
+          "desc": "rebaser une branche sur son parent"
+        },
+        "merge": {
+          "name": "Merge",
+          "desc": "fusionner deux branches via l'assistant"
+        }
+      },
+      "commits": {
+        "title": "Commits",
+        "reword": {
+          "name": "Reword",
+          "desc": "ré-écrire le message (génération IA ✨)"
+        },
+        "split": {
+          "name": "Split",
+          "desc": "découper un commit en deux, par fichier"
+        },
+        "dropSquashMove": {
+          "name": "Drop / Squash / Déplacer",
+          "desc": "supprimer, fusionner, réordonner"
+        },
+        "cherryPick": {
+          "name": "Cherry-pick",
+          "desc": "appliquer un commit sur une autre branche"
+        },
+        "aiReview": {
+          "name": "Relecture IA",
+          "desc": "relecture structurée d'un commit"
+        }
+      },
+      "stack": {
+        "title": "La pile",
+        "sync": {
+          "name": "Sync",
+          "desc": "fetch + fast-forward + nettoyage PR + restack"
+        },
+        "restackAll": {
+          "name": "Restack all",
+          "desc": "rebaser toute la pile"
+        },
+        "submit": {
+          "name": "Submit",
+          "desc": "pousser et ouvrir/mettre à jour les PRs (description IA ✨)"
+        },
+        "undo": {
+          "name": "Undo",
+          "desc": "annuler la dernière opération qui réécrit l'historique"
+        }
+      },
+      "stashes": {
+        "title": "Stashes",
+        "viewContent": {
+          "name": "Voir le contenu",
+          "desc": "la liste des fichiers de chaque stash"
+        },
+        "applyPopDrop": {
+          "name": "Apply / Pop / Drop",
+          "desc": "appliquer, appliquer+supprimer, supprimer"
+        },
+        "stasher": {
+          "name": "Stasher",
+          "desc": "mettre de côté les changements en cours"
+        }
+      },
+      "ai": {
+        "title": "Assistant IA (Claude)",
+        "summaryDetailed": {
+          "name": "Résumé / Détaillé",
+          "desc": "analyse d'un commit ou d'une PR"
+        },
+        "askClaude": {
+          "name": "Demander à Claude",
+          "desc": "chat libre sur tout le dépôt"
+        },
+        "mergeHelp": {
+          "name": "Aide au merge",
+          "desc": "guide le merge avec approbation des commandes"
+        },
+        "resolveConflicts": {
+          "name": "Résoudre les conflits",
+          "desc": "proposition IA par fichier, ou tout d'un coup (au restack)"
+        },
+        "digest": {
+          "name": "Digest",
+          "desc": "résumé « depuis ta dernière visite » à l'ouverture"
+        }
+      },
+      "pullRequests": {
+        "title": "Pull requests",
+        "review": {
+          "name": "Relecture",
+          "desc": "Approuver / Demander des changements / Commenter"
+        },
+        "ciChecks": {
+          "name": "Checks CI",
+          "desc": "voir chaque check, ouvrir ses logs ; notif de fin"
+        },
+        "badges": {
+          "name": "Pastilles",
+          "desc": "état PR, CI, review, avance/retard — d'un coup d'œil"
+        }
+      },
+      "productivity": {
+        "title": "Productivité",
+        "commandPalette": {
+          "name": "Palette de commandes",
+          "desc": "Ctrl/⌘ + K : aller quelque part ou lancer une action"
+        },
+        "shortcuts": {
+          "name": "Raccourcis clavier",
+          "desc": "? pour l'aide ; 1–6 vues ; s/r/n/p/u actions"
+        },
+        "commitSearch": {
+          "name": "Recherche de commits",
+          "desc": "filtrer le graphe par message / sha / auteur"
+        }
+      },
+      "settings": {
+        "title": "Réglages",
+        "theme": {
+          "name": "Thème",
+          "desc": "Classique / Moderne"
+        },
+        "assistantUi": {
+          "name": "Interface assistant",
+          "desc": "Chat (bulles) ou Terminal ; réponse progressive"
+        },
+        "aiBackend": {
+          "name": "Backend IA",
+          "desc": "Claude (cloud Anthropic) ou Ollama (modèles locaux gratuits)"
+        },
+        "notifications": {
+          "name": "Notifications",
+          "desc": "activité PRs/issues/CI + intervalle de sondage"
+        }
+      }
+    }
+  },
+  "issueDetailPanel": {
+    "by": "par {{author}}"
+  },
+  "issuesList": {
+    "states": {
+      "open": "ouvertes",
+      "closed": "fermées",
+      "all": "toutes"
+    },
+    "empty": "Aucune issue {{state}}.",
+    "emptyAll": "Aucune issue."
+  },
+  "moveToMenu": {
+    "moveToGroup": "Déplacer vers un groupe",
+    "ungrouped": "Sans groupe",
+    "newGroup": "Nouveau groupe…"
+  },
+  "prBadge": {
+    "openOnGitHub": "ouvrir sur GitHub"
+  },
+  "prList": {
+    "states": {
+      "open": "ouvertes",
+      "merged": "fusionnées",
+      "closed": "fermées",
+      "all": "toutes"
+    },
+    "empty": "Aucune PR {{state}}.",
+    "emptyAll": "Aucune PR.",
+    "draft": "brouillon"
+  },
+  "prPage": {
+    "header": {
+      "backTitle": "Retour à la liste (Échap)",
+      "openOnGitHub": "Ouvrir sur GitHub"
+    },
+    "actions": {
+      "summary": "Synthèse",
+      "summaryTitle": "Synthèse rapide",
+      "detailed": "Détaillé",
+      "detailedTitle": "Relecture détaillée",
+      "review": "AI Review",
+      "reviewTitle": "Relecture IA structurée (onglet Discussion)",
+      "merge": "Merger",
+      "mergeTitle": "Merger cette PR directement (gh pr merge), puis resynchroniser la pile",
+      "mergeAssist": "Aide au merge",
+      "mergeAssistTitle": "Assistant de merge guidé ({{ai}})"
+    },
+    "tabs": {
+      "files": "Fichiers",
+      "filesCount": "Fichiers ({{count}})",
+      "discussion": "Discussion"
+    },
+    "review": {
+      "reviewing": "Relecture… (~30 s)",
+      "noFindings": "Aucun problème détecté ✓",
+      "viewFile": "Voir le fichier concerné",
+      "post": "Poster sur la PR",
+      "postTitle": "Poster cette relecture sur la PR : commentaires en ligne + résumé, en mode « commentaire »"
+    },
+    "humanReview": {
+      "heading": "Review",
+      "placeholder": "Commentaire (requis pour « changements » / « commenter »)",
+      "approve": "Approuver",
+      "requestChanges": "Changements",
+      "comment": "Commenter",
+      "addComment": "Ajoute un commentaire"
+    },
+    "checks": {
+      "button": "Checks CI",
+      "empty": "Aucun check rapporté.",
+      "viewLogs": "Voir les logs sur GitHub"
+    },
+    "description": "Description",
+    "commits": "Commits ({{count}})",
+    "merge": {
+      "notice": "PR mergée ✓ — pile resynchronisée.",
+      "confirmTitle": "Merger la pull request #{{number}} ?",
+      "stackedWarning": {
+        "before": "Cette PR est empilée sur",
+        "middle": ", pas sur le tronc",
+        "after": ". Dans une pile, merge les PR parentes d'abord."
+      },
+      "ciWarning": "CI en échec ou review manquante — GitHub refusera peut-être le merge.",
+      "method": "Méthode",
+      "methods": {
+        "squash": {
+          "label": "Squash",
+          "hint": "un seul commit sur le tronc (recommandé pour une pile)"
+        },
+        "merge": {
+          "label": "Commit de merge",
+          "hint": "conserve l'historique de la branche"
+        },
+        "rebase": {
+          "label": "Rebase",
+          "hint": "rejoue les commits sur la base"
+        }
+      },
+      "deleteBranch": {
+        "label": "Supprimer la branche distante après le merge",
+        "hint": "À laisser décoché tant que des PR enfants sont empilées sur cette branche."
+      }
+    }
+  },
+  "repoGraphView": {
+    "analyzing": "Analyse des dépôts…",
+    "empty": "Ajoutez des dépôts pour voir les liens entre eux."
+  },
+  "settingsModal": {
+    "title": "Réglages",
+    "tabs": {
+      "general": "Général",
+      "ai": "IA",
+      "about": "Aide"
+    },
+    "themes": {
+      "classic": {
+        "label": "Classique",
+        "hint": "Sombre neutre · indigo"
+      },
+      "modern": {
+        "label": "Modern",
+        "hint": "Bleu-encre · teal"
+      }
+    },
+    "general": {
+      "language": "Langue",
+      "languageAuto": "Automatique ({{lang}})",
+      "languageHint": "Par défaut, l'app suit la langue de votre machine. S'applique immédiatement.",
+      "appearance": "Apparence",
+      "appearanceHint": "S'applique immédiatement. Le thème classique reste disponible à tout moment.",
+      "pollInterval": "Intervalle de sondage (secondes)",
+      "pollIntervalHint": "Fréquence à laquelle gitui cherche commits, PRs et issues. Minimum 30s.",
+      "notifications": "Notifications bureau pour la nouvelle activité"
+    },
+    "ai": {
+      "model": "Modèle",
+      "chatStreaming": "Réponse progressive (effet machine à écrire)",
+      "assistantUi": {
+        "label": "Interface assistant (Summary / Detailed)",
+        "chat": "Chat",
+        "chatHint": "Bulles de conversation",
+        "terminal": "Terminal",
+        "terminalHint": "Terminal Claude brut",
+        "hint": "Le chat parle à Claude sans afficher le terminal. En mode chat, les merges demandent une autorisation avant chaque commande qui écrit."
+      },
+      "backend": {
+        "label": "Backend IA (moteur de claude)",
+        "anthropic": "Claude (cloud)",
+        "anthropicHint": "API Anthropic · ton login",
+        "ollama": "Ollama (local)",
+        "ollamaHint": "Modèles locaux, gratuits"
+      },
+      "anthropic": {
+        "modelPlaceholder": "défaut du compte",
+        "modelHintPre": "Alias (",
+        "modelHintPost": ") ou nom complet. Vide = modèle par défaut de ton compte Claude."
+      },
+      "ollama": {
+        "host": "Hôte Ollama",
+        "detect": "Détecter",
+        "detected": "{{count}} modèle(s) détecté(s).",
+        "noModels": "Aucun modèle — `ollama pull qwen3-coder` (local) ou `ollama launch claude` (cloud).",
+        "hintPre": "La CLI",
+        "hintMid": " reste requise (c'est le moteur) ; Ollama fournit juste le modèle — local (",
+        "hintMid2": ") ou cloud (",
+        "hintMid3": ", modèles",
+        "hintPost": ")."
+      }
+    },
+    "about": {
+      "intro": "Documentation, guide interactif et vérification de l'environnement.",
+      "help": "Tout ce que fait l'app — et guide interactif",
+      "checkTools": "Vérifier les outils (git, gh, Claude Code)"
+    }
+  },
+  "shortcutsHelp": {
+    "title": "Raccourcis clavier",
+    "commandPalette": "Palette de commandes",
+    "showHelp": "Afficher cette aide",
+    "views": "Vue : graphe · commits · tree · PRs · issues · docs",
+    "newBranch": "Nouvelle branche",
+    "singleKeyNote": "Les raccourcis à une touche sont ignorés pendant la saisie dans un champ."
+  },
+  "sidebar": {
+    "empty": "Aucun dépôt pour le moment."
+  },
+  "spinner": {
+    "loading": "Chargement"
+  },
+  "stashModal": {
+    "title": "Stashes",
+    "messagePlaceholder": "Message (optionnel)",
+    "includeUntrackedTitle": "Inclure les fichiers non suivis",
+    "untracked": "non suivis",
+    "push": "Stasher",
+    "pushTitle": "Stasher les changements en cours",
+    "pushNothingTitle": "Aucun changement à stasher",
+    "empty": "Aucun stash.",
+    "apply": "Apply",
+    "applyTitle": "Appliquer (garde le stash)",
+    "pop": "Pop",
+    "popTitle": "Appliquer puis supprimer",
+    "drop": "Drop",
+    "dropTitle": "Supprimer ce stash",
+    "noFiles": "(aucun fichier détecté)"
+  },
+  "submitDialog": {
+    "title": "Soumettre la pile",
+    "loadingPlan": "Chargement du plan…",
+    "nothingToSubmit": "Rien à soumettre — aucune branche suivie.",
+    "badge": {
+      "newPr": "nouvelle PR",
+      "updateBase": "mettre à jour la base",
+      "upToDate": "à jour"
+    },
+    "prTitlePlaceholder": "Titre de la PR",
+    "prBodyPlaceholder": "Description de la PR (Markdown, optionnel)",
+    "describe": "Décrire",
+    "describeTitle": "Générer titre + description (IA, depuis les commits de la branche)",
+    "createAsDraft": "Créer les nouvelles PR en brouillon",
+    "submitting": "Soumission…",
+    "summary": {
+      "created": "{{count}} PR créée(s)",
+      "updated": "{{count}} mise(s) à jour",
+      "submitted": "soumis"
+    }
+  },
+  "terminalDock": {
+    "sessionEnded": "session terminée",
+    "repo": "dépôt"
+  },
+  "tour": {
+    "previous": "Précédent",
+    "next": "Suivant"
+  },
+  "welcomeScreen": {
+    "features": {
+      "heading": "Ce que tu peux faire",
+      "stack": {
+        "title": "Visualise & réorganise ta pile",
+        "desc": "Arbre des branches, glisser-déposer pour re-parenter, graphe des commits."
+      },
+      "restack": {
+        "title": "Restack · Sync · Submit",
+        "desc": "Rebase en cascade, fast-forward, push + ouverture/maj des PRs GitHub — et Undo."
+      },
+      "ai": {
+        "title": "Aides IA",
+        "desc": "Messages de commit, descriptions de PR, revues, résolution de conflits, merges guidés, chat."
+      },
+      "daily": {
+        "title": "Au quotidien",
+        "desc": "Review de PR, checks CI, stashes, recherche de commits, palette Ctrl/⌘ + K."
+      }
+    },
+    "intro": {
+      "title": "Bienvenue dans gitui",
+      "lead1": "Ton outil de",
+      "leadStrong1": "piles de branches",
+      "lead2": "(stacked PRs), local et gratuit — façon Graphite. Visualise l'arbre de tes branches,",
+      "lead3": "en cascade, et ouvre/maj tes PRs GitHub."
+    },
+    "ai": {
+      "heading": "Active les fonctions IA",
+      "lead1": "Les aides IA passent par la CLI",
+      "lead2": "Pour la meilleure expérience, installe l'une des deux — au choix :",
+      "claude": {
+        "title": "Claude Code (cloud)",
+        "desc": "Avec ton compte Anthropic — modèles Claude."
+      },
+      "ollama": {
+        "title": "Ollama (local & gratuit)",
+        "desc": "Modèles locaux ou cloud Ollama, sans compte Anthropic."
+      },
+      "install": "Installer",
+      "note1": "Tu pourras choisir le moteur et le modèle dans",
+      "noteSettings": "Réglages → IA",
+      "note2": "à tout moment."
+    },
+    "nav": {
+      "skip": "Passer",
+      "previous": "Précédent",
+      "startTour": "Démarrer le guide",
+      "next": "Suivant"
+    }
+  },
+  "whatsNewDialog": {
+    "title": "Quoi de neuf — gitui {{version}}",
+    "close": "Fermer",
+    "gotIt": "Compris"
+  },
+  "workspaceGroupFilter": {
+    "allGroups": "Tous les groupes",
+    "ungrouped": "Sans groupe"
+  }
+}

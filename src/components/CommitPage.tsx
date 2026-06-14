@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ArrowLeft, Sparkles, ShieldCheck, Loader2, GitBranch } from "lucide-react";
 import type { CommitDetail, CommitNode, PrReview } from "../lib/types";
 import { api, errorText } from "../lib/api";
@@ -30,6 +31,7 @@ export function CommitPage({
   onAnalyze: (sha: string, mode: string) => void;
   onCherryPick: (sha: string, target: string) => void;
 }) {
+  const { t } = useTranslation();
   const [detail, setDetail] = useState<CommitDetail | null>(null);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [view, setView] = useState<DiffViewMode>(loadDiffViewMode);
@@ -91,7 +93,7 @@ export function CommitPage({
         <div className="flex items-center gap-2">
           <button
             onClick={onClose}
-            title="Retour au graphe (Échap)"
+            title={t("commitPage.backToGraph")}
             className="rounded p-1 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -105,22 +107,22 @@ export function CommitPage({
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <button
             onClick={() => onAnalyze(node.sha, "summary")}
-            title={`Synthèse rapide (${aiName})`}
+            title={t("commitPage.summaryTitle", { ai: aiName })}
             className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-indigo-500"
           >
-            <Sparkles className="h-3.5 w-3.5" /> Summary
+            <Sparkles className="h-3.5 w-3.5" /> {t("commitPage.summary")}
           </button>
           <button
             onClick={() => onAnalyze(node.sha, "detailed")}
-            title="Analyse détaillée"
+            title={t("commitPage.detailedTitle")}
             className="inline-flex items-center gap-1.5 rounded-md border border-indigo-600 px-2.5 py-1 text-xs font-medium text-indigo-300 hover:bg-indigo-950/40"
           >
-            <Sparkles className="h-3.5 w-3.5" /> Detailed
+            <Sparkles className="h-3.5 w-3.5" /> {t("commitPage.detailed")}
           </button>
           <button
             onClick={runReview}
             disabled={reviewing}
-            title="Relecture IA structurée"
+            title={t("commitPage.reviewTitle")}
             className="inline-flex items-center gap-1.5 rounded-md border border-indigo-600 px-2.5 py-1 text-xs font-medium text-indigo-300 hover:bg-indigo-950/40 disabled:opacity-50"
           >
             {reviewing ? (
@@ -128,7 +130,7 @@ export function CommitPage({
             ) : (
               <ShieldCheck className="h-3.5 w-3.5" />
             )}
-            AI Review
+            {t("commitPage.review")}
           </button>
           <div className="ml-auto flex items-center gap-2">
             <DiffViewToggle value={view} onChange={changeView} />
@@ -148,7 +150,7 @@ export function CommitPage({
                 </select>
                 <button
                   onClick={() => onCherryPick(node.sha, cpTarget || cpBranches[0])}
-                  title="Appliquer ce commit sur la branche choisie"
+                  title={t("commitPage.cherryPickTitle")}
                   className="shrink-0 rounded-md border border-emerald-700 px-2.5 py-1 text-xs font-medium text-emerald-300 hover:bg-emerald-950/40"
                 >
                   Cherry-pick
@@ -164,7 +166,7 @@ export function CommitPage({
         <div className="shrink-0 border-b border-neutral-800 bg-neutral-900/30 px-4 py-2 text-xs">
           {reviewing && (
             <div className="flex items-center gap-2 text-neutral-400">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Relecture… (~30 s)
+              <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("commitPage.reviewing")}
             </div>
           )}
           {reviewError && <div className="text-red-300">{reviewError}</div>}
@@ -177,8 +179,8 @@ export function CommitPage({
                 )}
                 <p className="mt-0.5 text-neutral-500">
                   {review.findings.length === 0
-                    ? "Aucun problème détecté ✓"
-                    : `${review.findings.length} remarque(s) — annotées dans le diff, badges dans l'arborescence.`}
+                    ? t("commitPage.noFindings")
+                    : t("commitPage.findings", { count: review.findings.length })}
                 </p>
               </div>
             </div>
@@ -194,7 +196,7 @@ export function CommitPage({
       )}
 
       {detail === null ? (
-        <p className="p-4 text-sm text-neutral-500">Chargement…</p>
+        <p className="p-4 text-sm text-neutral-500">{t("common.loading")}</p>
       ) : (
         <DiffExplorer
           files={detail.files}

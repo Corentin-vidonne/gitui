@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ReactFlow,
   Background,
@@ -99,6 +100,7 @@ export function RepoGraphView({
   assignments: Record<string, string>;
   onOpenRepo: (path: string) => void;
 }) {
+  const { t } = useTranslation();
   const [graph, setGraph] = useState<RepoGraph | null>(null);
   const [error, setError] = useState<string | null>(null);
   const palette = useThemePalette();
@@ -225,14 +227,14 @@ export function RepoGraphView({
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 text-sm text-neutral-600">
         <Spinner className="h-6 w-6" />
-        Analyzing repositories…
+        {t("repoGraphView.analyzing")}
       </div>
     );
   }
   if (graph.nodes.length === 0) {
     return (
       <div className="flex h-full items-center justify-center text-sm text-neutral-600">
-        Add repositories to see the links between them.
+        {t("repoGraphView.empty")}
       </div>
     );
   }

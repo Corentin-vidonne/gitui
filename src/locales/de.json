@@ -1,0 +1,1041 @@
+{
+  "addRepoDialog": {
+    "title": "Repository hinzufügen",
+    "pickOpenTitle": "Vorhandenes git-Repository auswählen",
+    "pickCloneDestTitle": "Zielordner zum Klonen des Repositorys wählen",
+    "tabs": {
+      "open": "Vorhandenes öffnen",
+      "clone": "Von URL klonen"
+    },
+    "openHint": "Wähle ein bereits auf deinem Rechner geklontes Repository.",
+    "opening": "Wird geöffnet…",
+    "chooseFolder": "Ordner wählen…",
+    "urlLabel": "Repository-URL",
+    "cloneIntoLabel": "Klonen nach",
+    "chooseDestination": "Zielordner wählen…",
+    "cloning": "Wird geklont…",
+    "clone": "Klonen"
+  },
+  "app": {
+    "tour": {
+      "welcomeTitle": "Willkommen 👋",
+      "welcomeBody": "Eine kurze Tour durch die Hauptfunktionen. Du kannst sie jederzeit schließen (Esc).",
+      "viewsTitle": "Ansicht wechseln",
+      "viewsBody": "Branch-Graph, Commits, Baum, PRs, Issues, Docs. (Kürzel 1–6.)",
+      "stackActionsTitle": "Stack-Aktionen",
+      "stackActionsBody": "Sync aktualisiert, Restack rebaset den Stack, Undo macht die letzte Operation rückgängig. (s / r / u)",
+      "newBranchTitle": "Branch erstellen",
+      "newBranchBody": "Oben auf dem Stack, mit einem von der KI vorgeschlagenen Namen. (n)",
+      "submitTitle": "Veröffentlichen",
+      "submitBody": "Push und öffnet/aktualisiert die PRs; Beschreibung von der KI verfasst. (p)",
+      "claudeTitle": "KI-Assistent",
+      "claudeBody": "Über das Repository chatten, Nachrichten generieren, Code reviewen, geführter merge.",
+      "stashTitle": "Stashes",
+      "stashBody": "Sieh, was jeder Stash enthält, wende ihn an oder lösche ihn.",
+      "doneTitle": "Jetzt bist du dran 🚀",
+      "doneBody": "Ctrl/⌘ + K für die Palette, ? für die Kürzel. Die Hilfeseite fasst alles zusammen."
+    },
+    "notify": {
+      "newUpdates": "{{count}} neue Aktualisierungen"
+    },
+    "toast": {
+      "synced": "Synced ✓",
+      "undone": "Rückgängig gemacht ✓",
+      "syncedRepos": "Synced {{ok}} Repository/s ✓",
+      "syncedReposPartial": "Synced {{ok}}, {{fail}} fehlgeschlagen",
+      "reparented": "{{branch}} → {{newParent}}",
+      "submitted": "Submit abgeschlossen — {{summary}}"
+    },
+    "palette": {
+      "groupBranches": "Branches",
+      "groupActions": "Aktionen",
+      "groupViews": "Ansichten",
+      "current": "aktuell",
+      "trunk": "Trunk",
+      "undoAction": "Undo: {{label}}",
+      "restackAll": "Restack alle",
+      "newBranch": "Neuer Branch",
+      "stashes": "Stashes",
+      "commandLog": "Befehlsprotokoll",
+      "askAi": "{{name}} fragen",
+      "settings": "Einstellungen",
+      "shortcuts": "Tastenkürzel",
+      "help": "Hilfe / Interaktive Anleitung",
+      "viewBranchGraph": "Ansicht: Branch-Graph",
+      "viewCommitGraph": "Ansicht: Commit-Graph",
+      "viewTree": "Ansicht: Baum",
+      "viewPrs": "Ansicht: Pull Requests",
+      "viewIssues": "Ansicht: Issues",
+      "viewDocs": "Ansicht: Markdown-Docs"
+    },
+    "guides": {
+      "viewGraph": {
+        "title": "Branch-Graph",
+        "body": "Hier ist dein Stack. Ziehe einen Branch auf einen anderen, um ihn umzuhängen; die Badges zeigen den Status (CI, Review, im Rückstand…)."
+      },
+      "viewCommits": {
+        "title": "Commit-Graph",
+        "body": "Der Commit-DAG. Tippe hier, um nach Nachricht / sha / Autor zu filtern."
+      },
+      "commitSearch": {
+        "title": "Commit-Suche",
+        "body": "Tippe: nicht passende Commits werden ausgeblendet und die Ansicht zentriert sich auf die Ergebnisse."
+      },
+      "commitOps": {
+        "title": "Commit-Aktionen",
+        "body": "Klicke einen Commit → Detailbereich: Summary/Detailed, AI Review, cherry-pick, und beim Überfahren reword (KI) / split / drop / squash / move."
+      },
+      "tree": {
+        "title": "Baumansicht",
+        "body": "Der Stack als Liste. Fahre über einen Branch für seine Aktionen, klicke ihn für das Detail."
+      },
+      "branchOps": {
+        "title": "Branch-Aktionen",
+        "body": "Fahre über einen Branch → checkout, set parent, restack, merge, track/untrack."
+      },
+      "prs": {
+        "title": "Pull Requests",
+        "body": "Öffne eine PR: Genehmigen / Änderungen anfordern / Kommentieren, CI-Checks + Logs, AI Review (als Inline-Kommentare auf der PR postbar)."
+      },
+      "issues": {
+        "title": "Issues",
+        "body": "Die Liste der Issues und ihr Detail."
+      },
+      "docs": {
+        "title": "Docs",
+        "body": "Die Markdown-Dateien des Repositorys."
+      },
+      "views": {
+        "title": "Ansichten",
+        "body": "Klicke, um die Ansicht zu wechseln (oder Tasten 1–6)."
+      },
+      "sync": {
+        "title": "Sync / Restack / Undo",
+        "body": "Sync aktualisiert, Restack rebaset den Stack, Undo macht rückgängig. Klicke zum Ausprobieren."
+      },
+      "newBranch": {
+        "title": "Neuer Branch",
+        "body": "Klicke, um einen Branch zu erstellen (von der KI vorgeschlagener Name)."
+      },
+      "submit": {
+        "title": "Submit",
+        "body": "Push und öffnet/aktualisiert die PRs. Klicke, um den Plan und die von der KI verfasste Beschreibung zu sehen."
+      },
+      "claude": {
+        "title": "KI-Assistent",
+        "body": "Klicke, um mit Claude über das Repository zu chatten."
+      },
+      "stash": {
+        "title": "Stashes",
+        "body": "Hier sind deine Stashes: aufklappen, um die Dateien zu sehen, dann Apply / Pop / Drop."
+      },
+      "palette": {
+        "title": "Befehlspalette",
+        "body": "Tippe einen Branch, eine PR, eine Aktion… Enter zum Ausführen, Esc zum Schließen."
+      },
+      "shortcuts": {
+        "title": "Tastenkürzel",
+        "body": "Die Liste der Kürzel (du kannst auch ? drücken)."
+      }
+    },
+    "sidebar": {
+      "tagline": "stacked PRs",
+      "workspace": "Workspace",
+      "repositories": "Repositorys",
+      "newGroup": "Neue Gruppe",
+      "addRepository": "Repository hinzufügen"
+    },
+    "footer": {
+      "ghNotLoggedIn": "gh: nicht angemeldet",
+      "toolsMissing": "Erforderliche Tools fehlen — zum Ansehen klicken",
+      "tools": "Tools"
+    },
+    "header": {
+      "settings": "Einstellungen",
+      "workspaceTitle": "Workspace — Verknüpfungen zwischen Repositorys",
+      "loading": "Wird geladen…",
+      "trunk": "trunk: {{trunk}}",
+      "prsUnavailable": "PRs nicht verfügbar",
+      "updatesCount": "{{count}} neue Aktualisierungen über alle Repositorys",
+      "checkUpdates": "Nach Aktualisierungen suchen",
+      "stashCount": "{{count}} Stash(es)",
+      "stashes": "Stashes",
+      "newBranch": "Neuer Branch",
+      "submitTitle": "Branches pushen und PRs von unten nach oben öffnen/aktualisieren",
+      "submitUnavailable": "Mit gh anmelden und ein GitHub-Remote hinzufügen, um zu submit",
+      "askAiRepo": "{{name}} fragen (über das Repository chatten)",
+      "commandLogTitle": "Befehlsprotokoll: die von der App ausgeführten git/gh-Befehle ansehen",
+      "openInVscode": "Repository in VS Code öffnen",
+      "noRepoSelected": "Kein Repository ausgewählt"
+    },
+    "views": {
+      "branchGraph": "Branch-Graph",
+      "commitGraph": "Commit-Graph",
+      "tree": "Baum",
+      "pullRequests": "Pull Requests",
+      "issues": "Issues",
+      "markdownDocs": "Markdown-Docs"
+    },
+    "actions": {
+      "syncTitle": "Sync: fetch + Fast-Forward des Trunks + Aufräumen der merged PRs, dann restack",
+      "restackTitle": "Den gesamten Stack auf seine Parents restack",
+      "undoTitle": "Rückgängig: {{label}}",
+      "nothingToUndo": "Nichts rückgängig zu machen"
+    },
+    "empty": {
+      "noRepoTitle": "Noch kein Repository",
+      "noRepoBody": "Füge ein git-Repository hinzu, um deine gestapelten Branches und Pull Requests zu visualisieren und zu verwalten.",
+      "noRepoBodyClassic": "Füge ein git-Repository hinzu, um deinen Branch-Stack zu sehen.",
+      "addRepository": "Repository hinzufügen",
+      "loadingRepo": "{{name}} wird geladen…"
+    },
+    "commits": {
+      "searchPlaceholder": "Commit suchen…"
+    },
+    "tree": {
+      "untrackedBranches": "Nicht verfolgte Branches"
+    },
+    "panel": {
+      "dragToResize": "Zum Anpassen ziehen"
+    },
+    "group": {
+      "newTitle": "Neue Gruppe",
+      "createAndMove": "Erstellen & verschieben",
+      "renameTitle": "Gruppe umbenennen",
+      "rename": "Umbenennen"
+    }
+  },
+  "appUpdateBanner": {
+    "available": "ist verfügbar",
+    "youHave": "du hast {{version}}",
+    "updateViaPackageManager": "Aktualisiere über deinen Paketmanager.",
+    "update": "Aktualisieren",
+    "updating": "Wird aktualisiert…",
+    "download": "Herunterladen",
+    "dismiss": "Ausblenden"
+  },
+  "branchDetail": {
+    "trunkBadge": "Trunk",
+    "rows": {
+      "parent": "Parent",
+      "untracked": "nicht verfolgt",
+      "status": "Status",
+      "aheadBehind": "{{ahead}} voraus · {{behind}} zurück",
+      "base": "Basis",
+      "workingTree": "Arbeitsverzeichnis",
+      "uncommitted": "nicht committete Änderungen",
+      "clean": "sauber",
+      "remote": "Remote",
+      "unpushed": "nicht gepushte Commits",
+      "upToDate": "aktuell"
+    },
+    "pr": {
+      "heading": "Pull request",
+      "viewDetails": "PR-Details ansehen",
+      "openOnGithub": "Auf GitHub öffnen",
+      "none": "Noch keine PR."
+    },
+    "commits": {
+      "recent": "Neueste Commits",
+      "onThisBranch": "Commits auf diesem Branch",
+      "none": "Keine Commits."
+    },
+    "commitActions": {
+      "reword": "Reword",
+      "split": "Split (in zwei Commits aufteilen)",
+      "squash": "Squash in älteren Commit",
+      "moveNewer": "Nach neuer verschieben",
+      "moveOlder": "Nach älter verschieben",
+      "drop": "Drop"
+    },
+    "actions": {
+      "checkout": "Checkout",
+      "newBranch": "Neuer Branch",
+      "merge": "Merge",
+      "publish": "Publish",
+      "restack": "Restack",
+      "setParent": "Parent festlegen",
+      "untrack": "Nicht mehr verfolgen",
+      "track": "Verfolgen"
+    },
+    "reword": {
+      "title": "Commit reword",
+      "generate": "Generieren",
+      "simple": "einfach",
+      "complet": "vollständig",
+      "simpleHint": "Kurze Nachricht (≤5 Wörter), konventionelles Präfix",
+      "completHint": "Vollständige Nachricht (Betreff + Rumpf), konventionelles Präfix"
+    },
+    "split": {
+      "title": "Commit split",
+      "introBefore": "Markiere die Zeilen (oder ganze Hunks / Dateien) des",
+      "introFirst": "ersten",
+      "introAfter": "Commits, unten im Stack; der Rest geht in den zweiten. Im Stil von",
+      "analyzing": "Diff wird analysiert…",
+      "noSplittable": "Keine aufteilbaren Zeilen (binär / Dateilöschung). Nutze stattdessen drop oder squash.",
+      "checkAll": "Alle markieren",
+      "uncheckAll": "Alle abwählen",
+      "ordFirst": ".",
+      "ordSecond": ".",
+      "commitWord": "Commit",
+      "wholeFile": "Ganze Datei",
+      "wholeHunk": "Ganzer Hunk",
+      "msg1Before": "Nachricht des ",
+      "msg1After": "Commits (markierte Zeilen)",
+      "msg2Before": "Nachricht des ",
+      "msg2After": "Commits (der Rest)",
+      "invalidHint": "Markiere mindestens eine Zeile (lass eine für den 2.) und fülle beide Nachrichten aus"
+    },
+    "drop": {
+      "title": "Commit drop",
+      "confirmBefore": "Drop",
+      "confirmAfter": "? Dies schreibt die Branch-Historie um."
+    }
+  },
+  "branchDialogs": {
+    "new": {
+      "title": "Neuer Branch",
+      "nameLabel": "Branch-Name",
+      "suggestTitle": "Namen vorschlagen (KI, aus deinen laufenden Änderungen)",
+      "parentLabel": "Parent (Basis)"
+    },
+    "setParent": {
+      "title": "Parent von {{branch}} festlegen",
+      "parentLabel": "Parent-Branch"
+    },
+    "merge": {
+      "title": "Branches mergen",
+      "sourceLabel": "Quelle (zu mergender Branch)",
+      "targetLabel": "Ziel (erhält den merge)",
+      "sameBranch": "Wähle zwei verschiedene Branches.",
+      "submit": "merge-Assistent"
+    }
+  },
+  "branchRow": {
+    "uncommitted": {
+      "title": "nicht committete Änderungen",
+      "label": "nicht committet"
+    },
+    "actions": {
+      "checkout": "Diesen Branch auschecken (checkout)",
+      "publish": "Veröffentlichen (push zu origin)",
+      "newChild": "Neuer Branch darüber",
+      "restack": "restack ab hier",
+      "setParent": "Parent festlegen",
+      "untrack": "Nicht mehr verfolgen",
+      "track": "Im Stack verfolgen"
+    },
+    "badges": {
+      "push": "lokale Commits nicht zu origin gepusht",
+      "behind": "Commits hinter dem Parent — restack erforderlich",
+      "ahead": "Commits vor dem Parent"
+    }
+  },
+  "chatDock": {
+    "label": {
+      "repo": "Repository"
+    },
+    "analyzing": "{{name}} analysiert…",
+    "thinking": "{{name}} denkt nach…",
+    "send": "Senden (Eingabetaste)",
+    "placeholder": {
+      "ask": "Stelle {{name}} eine Frage…",
+      "starting": "Sitzung wird gestartet…"
+    },
+    "note": {
+      "authorized": "✓ Autorisiert: {{command}}",
+      "refused": "✗ Abgelehnt: {{command}}"
+    },
+    "approval": {
+      "title": "Autorisierung erforderlich",
+      "prompt": "{{name}} möchte diesen Befehl ausführen:",
+      "compoundWarning": "Zusammengesetzter Befehl (Verkettung erkannt). Wenn du ihn autorisierst, wird {{name}} aufgefordert, die Befehle einzeln auszuführen — jeder muss separat autorisiert werden.",
+      "refuse": "Ablehnen",
+      "authorize": "Autorisieren"
+    }
+  },
+  "commandLogDock": {
+    "title": "Befehlsprotokoll",
+    "subtitle": "git- / gh-Befehle, die die App ausführt",
+    "clear": "Protokoll leeren",
+    "empty": "Noch keine Befehle. Starte eine Aktion (restack, sync, submit…) — die ausgeführten git/gh-Befehle erscheinen hier."
+  },
+  "commandPalette": {
+    "groups": {
+      "pullRequests": "Pull requests",
+      "issues": "Issues"
+    },
+    "searchPlaceholder": "Zu einem Branch, PR, Issue… wechseln oder eine Aktion ausführen",
+    "noResults": "Keine Ergebnisse"
+  },
+  "commentList": {
+    "review": {
+      "approved": "genehmigt",
+      "changesRequested": "Änderungen angefordert",
+      "commented": "kommentiert",
+      "dismissed": "verworfen"
+    },
+    "noMessage": "(keine Nachricht)",
+    "conversation": "Konversation ({{total}})",
+    "noMessages": "Noch keine Nachrichten."
+  },
+  "commitFilter": {
+    "allBranches": "Alle Branches",
+    "someBranches": "{{selected}}/{{total}} Branches",
+    "showBranches": "Branches anzeigen",
+    "all": "Alle"
+  },
+  "commitGraph": {
+    "empty": "Keine Commits zum Anzeigen."
+  },
+  "commitPage": {
+    "backToGraph": "Zurück zum Graphen (Esc)",
+    "summary": "Zusammenfassung",
+    "summaryTitle": "Schnelle Zusammenfassung ({{ai}})",
+    "detailed": "Detailliert",
+    "detailedTitle": "Detaillierte Analyse",
+    "review": "AI Review",
+    "reviewTitle": "Strukturierte KI-Review",
+    "cherryPickTitle": "Diesen Commit auf den gewählten Branch anwenden",
+    "reviewing": "Review läuft… (~30 s)",
+    "noFindings": "Keine Probleme gefunden ✓",
+    "findings": "{{count}} Anmerkung(en) — im Diff annotiert, mit Badges im Baum."
+  },
+  "common": {
+    "cancel": "Abbrechen",
+    "save": "Speichern",
+    "close": "Schließen",
+    "delete": "Löschen",
+    "remove": "Entfernen",
+    "confirm": "Bestätigen",
+    "loading": "Wird geladen…",
+    "error": "Fehler",
+    "retry": "Erneut versuchen",
+    "yes": "Ja",
+    "no": "Nein",
+    "ok": "OK",
+    "search": "Suchen",
+    "copy": "Kopieren",
+    "copied": "Kopiert",
+    "back": "Zurück",
+    "refresh": "Aktualisieren",
+    "open": "Öffnen",
+    "none": "Keine",
+    "edit": "Bearbeiten",
+    "create": "Erstellen",
+    "apply": "Anwenden",
+    "validate": "Bestätigen",
+    "loadingEllipsis": "Wird geladen…",
+    "comingSoon": "Demnächst verfügbar"
+  },
+  "conflictPanel": {
+    "title": "Restack pausiert — Konflikte lösen",
+    "onBranch": "auf",
+    "description": {
+      "before": "Behebe die Konflikte in deinem Editor und stage sie (",
+      "after": "), dann fahre fort — oder lass die KI eine Lösung pro Datei vorschlagen."
+    },
+    "resolveAll": {
+      "title": "Eine Lösung für jede Konfliktdatei vorschlagen und anwenden",
+      "label": "Alle per KI lösen ({{count}})"
+    },
+    "resolving": "Wird gelöst…",
+    "suggest": {
+      "title": "Die KI bitten, diese Datei zu lösen",
+      "label": "KI-Vorschlag"
+    },
+    "retry": "Erneut versuchen",
+    "previewResolved": "Aufgelöste Datei in der Vorschau anzeigen",
+    "markersWarning": "Der Vorschlag enthält noch Konfliktmarkierungen — vor dem Anwenden manuell prüfen.",
+    "markersLeftError": "Die KI hat Konfliktmarkierungen hinterlassen — löse diese Datei manuell.",
+    "apply": {
+      "title": "Diese Lösung schreiben und die Datei stagen",
+      "titleMarkers": "Die Lösung enthält noch Konfliktmarkierungen",
+      "label": "Anwenden"
+    },
+    "dismiss": "Verwerfen",
+    "continueRestack": "Restack fortsetzen",
+    "abort": "Abbrechen"
+  },
+  "dependencyGate": {
+    "tools": {
+      "git": {
+        "desc": "Unverzichtbar: alle Operationen an Branches, Commits und dem Stack."
+      },
+      "gh": {
+        "desc": "Pull requests, issues, CI-Checks und Submit."
+      }
+    },
+    "title": {
+      "missing": "Erforderliche Tools fehlen",
+      "setup": "Tools einrichten"
+    },
+    "intro": {
+      "before": "gitui stützt sich auf diese Kommandozeilen-Tools. Installiere die fehlenden und klicke dann auf",
+      "after": "."
+    },
+    "install": "Installieren",
+    "recheck": "Erneut prüfen",
+    "continue": "Fortfahren",
+    "claudeNote": "(KI-Assistenten) wird geprüft, sobald du eine KI-Funktion startest — du musst es für den Rest der App nicht installieren.",
+    "auth": {
+      "title": "GitHub CLI nicht angemeldet",
+      "hint": "Melde dich an, um auf PRs und issues zuzugreifen. Führe diesen Befehl in einem Terminal aus:"
+    },
+    "status": {
+      "ready": "Alles bereit ✨",
+      "missing": "{{count}} Tool(s) fehlen",
+      "authRequired": "Anmeldung erforderlich"
+    }
+  },
+  "diffExplorer": {
+    "viewMode": {
+      "unified": "Vereinheitlicht",
+      "split": "Nebeneinander"
+    },
+    "severity": {
+      "critical": "Kritisch",
+      "warning": "Warn.",
+      "info": "Info"
+    },
+    "aiNotes": "KI-Hinweise:",
+    "aiNotesCount": "{{count}} KI-Hinweis(e)",
+    "hideSeverity": "„{{label}}“ ausblenden",
+    "showSeverity": "„{{label}}“ anzeigen",
+    "shownCount": "{{shown}}/{{total}} angezeigt",
+    "fileCount": "{{count}} Datei(en)",
+    "noChanges": "Keine Änderungen.",
+    "noTextDiff": "Kein Text-Diff für diese Datei (binär oder Umbenennung).",
+    "selectFile": "Wähle links eine Datei aus."
+  },
+  "digestBanner": {
+    "header": "Seit deinem letzten Besuch · {{count}} Neuigkeit(en)",
+    "summarizing": "Zusammenfassung läuft…",
+    "more": "… und {{count}} weitere",
+    "markSeen": "Als gesehen markieren",
+    "seen": "Gesehen",
+    "dismiss": "Vorerst ausblenden"
+  },
+  "docsView": {
+    "new": "Neu",
+    "newFileTitle": "Neue .md-Datei",
+    "noFiles": "Keine .md-Dateien.",
+    "pathPlaceholder": "pfad/zur/datei.md",
+    "commitOnBranch": "Commit auf Branch",
+    "committing": "Commit läuft…",
+    "createAndCommit": "Erstellen und commit",
+    "contentPlaceholder": "# Titel\n\nMarkdown hier schreiben…",
+    "previewPlaceholder": "*Vorschau*",
+    "rendered": "Gerendert",
+    "raw": "Quelltext",
+    "emptyState": "Wähle eine .md-Datei aus oder erstelle eine neue."
+  },
+  "graphNode": {
+    "untracked": "nicht verfolgt",
+    "uncommittedChanges": "nicht committete Änderungen",
+    "unpushedCommits": "nicht gepushte Commits",
+    "ciStatus": "CI {{status}}"
+  },
+  "groupNameDialog": {
+    "placeholder": "Gruppenname"
+  },
+  "groupSection": {
+    "ungrouped": "Nicht gruppiert",
+    "updatesInGroup": "{{count}} neue Aktualisierung(en) in dieser Gruppe",
+    "updatesCount": "{{count}} neue Aktualisierung(en)",
+    "menu": {
+      "actions": "Gruppenaktionen",
+      "rename": "Umbenennen",
+      "syncing": "Synchronisierung…",
+      "syncGroup": "Gruppe synchronisieren",
+      "deleteGroup": "Gruppe löschen"
+    }
+  },
+  "helpPage": {
+    "test": "Testen",
+    "testTitle": "Eine Anleitung starten, um diese Funktion auszuprobieren",
+    "headerTitle": "Alles, was gitui kann",
+    "replayGuide": "Anleitung erneut ansehen",
+    "intro": {
+      "before": "gitui ist ein Werkzeug für",
+      "stacks": "Branch-Stacks",
+      "middle1": "(stacked PRs). Klicke auf",
+      "middle2": "neben einer Funktion, um sie in der App in Aktion zu sehen, oder",
+      "after": "für die allgemeine Tour."
+    },
+    "sections": {
+      "views": {
+        "title": "Ansichten",
+        "branchGraph": {
+          "name": "Branch-Graph",
+          "desc": "der Baum des Stacks; ziehe einen Branch auf einen anderen, um ihn neu zuzuordnen"
+        },
+        "commitGraph": {
+          "name": "Commit-Graph",
+          "desc": "der Commit-DAG, mit Suche und Filter"
+        },
+        "tree": {
+          "name": "Baum",
+          "desc": "der Stack als Liste, mit den Aktionen pro Branch"
+        },
+        "prs": {
+          "name": "Pull requests",
+          "desc": "Liste und Detail, Review, CI-Checks"
+        },
+        "issues": {
+          "name": "Issues",
+          "desc": "Liste und Detail der Issues"
+        },
+        "docs": {
+          "name": "Docs",
+          "desc": "die Markdown-Dateien des Repositorys"
+        }
+      },
+      "branches": {
+        "title": "Branches",
+        "newBranch": {
+          "name": "Neuer Branch",
+          "desc": "an der Spitze des Stacks (Name von der KI vorgeschlagen ✨)"
+        },
+        "branchOps": {
+          "name": "checkout / Parent festlegen / Verfolgen / Nicht mehr verfolgen",
+          "desc": "den Platz im Stack verwalten"
+        },
+        "restack": {
+          "name": "Restack",
+          "desc": "einen Branch auf seinen Parent rebasen"
+        },
+        "merge": {
+          "name": "Merge",
+          "desc": "zwei Branches über den Assistenten zusammenführen"
+        }
+      },
+      "commits": {
+        "title": "Commits",
+        "reword": {
+          "name": "Reword",
+          "desc": "die Nachricht neu schreiben (KI-Generierung ✨)"
+        },
+        "split": {
+          "name": "Split",
+          "desc": "einen Commit in zwei teilen, nach Datei"
+        },
+        "dropSquashMove": {
+          "name": "Drop / Squash / Verschieben",
+          "desc": "löschen, zusammenführen, neu anordnen"
+        },
+        "cherryPick": {
+          "name": "Cherry-pick",
+          "desc": "einen Commit auf einen anderen Branch anwenden"
+        },
+        "aiReview": {
+          "name": "KI-Review",
+          "desc": "strukturierte Review eines Commits"
+        }
+      },
+      "stack": {
+        "title": "Der Stack",
+        "sync": {
+          "name": "Sync",
+          "desc": "fetch + fast-forward + PR-Bereinigung + restack"
+        },
+        "restackAll": {
+          "name": "Restack all",
+          "desc": "den gesamten Stack rebasen"
+        },
+        "submit": {
+          "name": "Submit",
+          "desc": "pushen und die PRs öffnen/aktualisieren (KI-Beschreibung ✨)"
+        },
+        "undo": {
+          "name": "Undo",
+          "desc": "die letzte Operation rückgängig machen, die den Verlauf umschreibt"
+        }
+      },
+      "stashes": {
+        "title": "Stashes",
+        "viewContent": {
+          "name": "Inhalt anzeigen",
+          "desc": "die Dateiliste jedes Stashes"
+        },
+        "applyPopDrop": {
+          "name": "Apply / Pop / Drop",
+          "desc": "anwenden, anwenden+entfernen, entfernen"
+        },
+        "stasher": {
+          "name": "Stasher",
+          "desc": "die aktuellen Änderungen beiseitelegen"
+        }
+      },
+      "ai": {
+        "title": "KI-Assistent (Claude)",
+        "summaryDetailed": {
+          "name": "Zusammenfassung / Detailliert",
+          "desc": "Analyse eines Commits oder einer PR"
+        },
+        "askClaude": {
+          "name": "Claude fragen",
+          "desc": "freier Chat über das gesamte Repository"
+        },
+        "mergeHelp": {
+          "name": "Merge-Hilfe",
+          "desc": "führt durch den merge mit Befehlsbestätigung"
+        },
+        "resolveConflicts": {
+          "name": "Konflikte lösen",
+          "desc": "KI-Vorschlag pro Datei oder alles auf einmal (beim restack)"
+        },
+        "digest": {
+          "name": "Digest",
+          "desc": "Zusammenfassung „seit deinem letzten Besuch“ beim Öffnen"
+        }
+      },
+      "pullRequests": {
+        "title": "Pull requests",
+        "review": {
+          "name": "Review",
+          "desc": "Genehmigen / Änderungen anfordern / Kommentieren"
+        },
+        "ciChecks": {
+          "name": "CI-Checks",
+          "desc": "jeden Check ansehen, seine Logs öffnen; Benachrichtigung am Ende"
+        },
+        "badges": {
+          "name": "Plaketten",
+          "desc": "Status von PR, CI, Review, voraus/zurück — auf einen Blick"
+        }
+      },
+      "productivity": {
+        "title": "Produktivität",
+        "commandPalette": {
+          "name": "Befehlspalette",
+          "desc": "Strg/⌘ + K: irgendwohin springen oder eine Aktion starten"
+        },
+        "shortcuts": {
+          "name": "Tastenkürzel",
+          "desc": "? für die Hilfe; 1–6 Ansichten; s/r/n/p/u Aktionen"
+        },
+        "commitSearch": {
+          "name": "Commit-Suche",
+          "desc": "den Graphen nach Nachricht / sha / Autor filtern"
+        }
+      },
+      "settings": {
+        "title": "Einstellungen",
+        "theme": {
+          "name": "Thema",
+          "desc": "Klassisch / Modern"
+        },
+        "assistantUi": {
+          "name": "Assistenten-Oberfläche",
+          "desc": "Chat (Sprechblasen) oder Terminal; progressive Antwort"
+        },
+        "aiBackend": {
+          "name": "KI-Backend",
+          "desc": "Claude (Anthropic-Cloud) oder Ollama (kostenlose lokale Modelle)"
+        },
+        "notifications": {
+          "name": "Benachrichtigungen",
+          "desc": "Aktivität von PRs/Issues/CI + Abfrageintervall"
+        }
+      }
+    }
+  },
+  "issueDetailPanel": {
+    "by": "von {{author}}"
+  },
+  "issuesList": {
+    "states": {
+      "open": "offen",
+      "closed": "geschlossen",
+      "all": "alle"
+    },
+    "empty": "Keine {{state}} Issues.",
+    "emptyAll": "Keine Issues."
+  },
+  "moveToMenu": {
+    "moveToGroup": "In Gruppe verschieben",
+    "ungrouped": "Ohne Gruppe",
+    "newGroup": "Neue Gruppe…"
+  },
+  "prBadge": {
+    "openOnGitHub": "auf GitHub öffnen"
+  },
+  "prList": {
+    "states": {
+      "open": "offen",
+      "merged": "zusammengeführt",
+      "closed": "geschlossen",
+      "all": "alle"
+    },
+    "empty": "Keine {{state}} PRs.",
+    "emptyAll": "Keine PRs.",
+    "draft": "Entwurf"
+  },
+  "prPage": {
+    "header": {
+      "backTitle": "Zurück zur Liste (Esc)",
+      "openOnGitHub": "Auf GitHub öffnen"
+    },
+    "actions": {
+      "summary": "Zusammenfassung",
+      "summaryTitle": "Schnelle Zusammenfassung",
+      "detailed": "Detailliert",
+      "detailedTitle": "Detaillierte Review",
+      "review": "AI Review",
+      "reviewTitle": "Strukturierte KI-Review (Tab Diskussion)",
+      "merge": "Mergen",
+      "mergeTitle": "Diese PR direkt mergen (gh pr merge), dann den Stack neu synchronisieren",
+      "mergeAssist": "Merge-Hilfe",
+      "mergeAssistTitle": "Geführter Merge-Assistent ({{ai}})"
+    },
+    "tabs": {
+      "files": "Dateien",
+      "filesCount": "Dateien ({{count}})",
+      "discussion": "Diskussion"
+    },
+    "review": {
+      "reviewing": "Review läuft… (~30 s)",
+      "noFindings": "Keine Probleme gefunden ✓",
+      "viewFile": "Betroffene Datei anzeigen",
+      "post": "Auf der PR posten",
+      "postTitle": "Diese Review auf der PR posten: Inline-Kommentare + Zusammenfassung, im Modus „Kommentar“"
+    },
+    "humanReview": {
+      "heading": "Review",
+      "placeholder": "Kommentar (erforderlich für „Änderungen“ / „Kommentieren“)",
+      "approve": "Genehmigen",
+      "requestChanges": "Änderungen",
+      "comment": "Kommentieren",
+      "addComment": "Füge einen Kommentar hinzu"
+    },
+    "checks": {
+      "button": "CI-Checks",
+      "empty": "Keine Checks gemeldet.",
+      "viewLogs": "Logs auf GitHub ansehen"
+    },
+    "description": "Beschreibung",
+    "commits": "Commits ({{count}})",
+    "merge": {
+      "notice": "PR gemergt ✓ — Stack neu synchronisiert.",
+      "confirmTitle": "Pull Request #{{number}} mergen?",
+      "stackedWarning": {
+        "before": "Diese PR ist gestapelt auf",
+        "middle": ", nicht auf dem Trunk",
+        "after": ". In einem Stack zuerst die übergeordneten PRs mergen."
+      },
+      "ciWarning": "CI fehlgeschlagen oder Review fehlt — GitHub verweigert den Merge möglicherweise.",
+      "method": "Methode",
+      "methods": {
+        "squash": {
+          "label": "Squash",
+          "hint": "ein einziger Commit auf dem Trunk (empfohlen für einen Stack)"
+        },
+        "merge": {
+          "label": "Merge-Commit",
+          "hint": "behält die Branch-Historie bei"
+        },
+        "rebase": {
+          "label": "Rebase",
+          "hint": "spielt die Commits auf der Basis erneut ab"
+        }
+      },
+      "deleteBranch": {
+        "label": "Remote-Branch nach dem Merge löschen",
+        "hint": "Unangekreuzt lassen, solange Kind-PRs auf diesem Branch gestapelt sind."
+      }
+    }
+  },
+  "repoGraphView": {
+    "analyzing": "Repositorys werden analysiert…",
+    "empty": "Füge Repositorys hinzu, um die Verbindungen zwischen ihnen zu sehen."
+  },
+  "settingsModal": {
+    "title": "Einstellungen",
+    "tabs": {
+      "general": "Allgemein",
+      "ai": "KI",
+      "about": "Hilfe"
+    },
+    "themes": {
+      "classic": {
+        "label": "Klassisch",
+        "hint": "Neutrales Dunkel · Indigo"
+      },
+      "modern": {
+        "label": "Modern",
+        "hint": "Tintenblau · Türkis"
+      }
+    },
+    "general": {
+      "language": "Sprache",
+      "languageAuto": "Automatisch ({{lang}})",
+      "languageHint": "Standardmäßig folgt die App der Sprache deines Rechners. Wird sofort angewendet.",
+      "appearance": "Erscheinungsbild",
+      "appearanceHint": "Wird sofort angewendet. Das klassische Theme bleibt jederzeit verfügbar.",
+      "pollInterval": "Abfrageintervall (Sekunden)",
+      "pollIntervalHint": "Wie oft gitui nach Commits, PRs und Issues sucht. Mindestens 30s.",
+      "notifications": "Desktop-Benachrichtigungen für neue Aktivität"
+    },
+    "ai": {
+      "model": "Modell",
+      "chatStreaming": "Schrittweise Antwort (Schreibmaschineneffekt)",
+      "assistantUi": {
+        "label": "Assistent-Oberfläche (Summary / Detailed)",
+        "chat": "Chat",
+        "chatHint": "Gesprächsblasen",
+        "terminal": "Terminal",
+        "terminalHint": "Rohes Claude-Terminal",
+        "hint": "Der Chat spricht mit Claude, ohne das Terminal anzuzeigen. Im Chat-Modus verlangen merge-Vorgänge vor jedem schreibenden Befehl eine Bestätigung."
+      },
+      "backend": {
+        "label": "KI-Backend (claude-Engine)",
+        "anthropic": "Claude (cloud)",
+        "anthropicHint": "Anthropic-API · dein Login",
+        "ollama": "Ollama (local)",
+        "ollamaHint": "Lokale Modelle, kostenlos"
+      },
+      "anthropic": {
+        "modelPlaceholder": "Konto-Standard",
+        "modelHintPre": "Alias (",
+        "modelHintPost": ") oder vollständiger Name. Leer = Standardmodell deines Claude-Kontos."
+      },
+      "ollama": {
+        "host": "Ollama-Host",
+        "detect": "Erkennen",
+        "detected": "{{count}} Modell(e) erkannt.",
+        "noModels": "Kein Modell — `ollama pull qwen3-coder` (lokal) oder `ollama launch claude` (cloud).",
+        "hintPre": "Die",
+        "hintMid": "-CLI ist weiterhin erforderlich (sie ist die Engine); Ollama liefert nur das Modell — lokal (",
+        "hintMid2": ") oder cloud (",
+        "hintMid3": ", Modelle",
+        "hintPost": ")."
+      }
+    },
+    "about": {
+      "intro": "Dokumentation, interaktive Anleitung und Umgebungsprüfung.",
+      "help": "Alles, was die App tut — und interaktive Anleitung",
+      "checkTools": "Werkzeuge prüfen (git, gh, Claude Code)"
+    }
+  },
+  "shortcutsHelp": {
+    "title": "Tastenkürzel",
+    "commandPalette": "Befehlspalette",
+    "showHelp": "Diese Hilfe anzeigen",
+    "views": "Ansicht: Graph · commits · tree · PRs · issues · docs",
+    "newBranch": "Neuer Branch",
+    "singleKeyNote": "Einzeltasten-Kürzel werden ignoriert, während du in ein Feld tippst."
+  },
+  "sidebar": {
+    "empty": "Noch kein Repository."
+  },
+  "spinner": {
+    "loading": "Wird geladen"
+  },
+  "stashModal": {
+    "title": "Stashes",
+    "messagePlaceholder": "Nachricht (optional)",
+    "includeUntrackedTitle": "Nicht verfolgte Dateien einbeziehen",
+    "untracked": "nicht verfolgt",
+    "push": "Stash",
+    "pushTitle": "Aktuelle Änderungen stashen",
+    "pushNothingTitle": "Keine Änderungen zum Stashen",
+    "empty": "Kein Stash.",
+    "apply": "Apply",
+    "applyTitle": "Anwenden (Stash behalten)",
+    "pop": "Pop",
+    "popTitle": "Anwenden und dann entfernen",
+    "drop": "Drop",
+    "dropTitle": "Diesen Stash entfernen",
+    "noFiles": "(keine Datei erkannt)"
+  },
+  "submitDialog": {
+    "title": "Stack einreichen",
+    "loadingPlan": "Plan wird geladen…",
+    "nothingToSubmit": "Nichts einzureichen — keine verfolgten Branches.",
+    "badge": {
+      "newPr": "neue PR",
+      "updateBase": "Basis aktualisieren",
+      "upToDate": "aktuell"
+    },
+    "prTitlePlaceholder": "PR-Titel",
+    "prBodyPlaceholder": "PR-Beschreibung (Markdown, optional)",
+    "describe": "Beschreiben",
+    "describeTitle": "Titel + Beschreibung generieren (KI, aus den Commits des Branch)",
+    "createAsDraft": "Neue PRs als Entwurf erstellen",
+    "submitting": "Wird eingereicht…",
+    "summary": {
+      "created": "{{count}} PR erstellt",
+      "updated": "{{count}} aktualisiert",
+      "submitted": "eingereicht"
+    }
+  },
+  "terminalDock": {
+    "sessionEnded": "Sitzung beendet",
+    "repo": "Repository"
+  },
+  "tour": {
+    "previous": "Zurück",
+    "next": "Weiter"
+  },
+  "welcomeScreen": {
+    "features": {
+      "heading": "Was du tun kannst",
+      "stack": {
+        "title": "Visualisiere & ordne deinen Stack neu",
+        "desc": "Branch-Baum, Drag-and-Drop zum Neuzuordnen des Parents, Commit-Graph."
+      },
+      "restack": {
+        "title": "Restack · Sync · Submit",
+        "desc": "Kaskadierender rebase, fast-forward, push + Öffnen/Aktualisieren von GitHub-PRs — und Undo."
+      },
+      "ai": {
+        "title": "KI-Helfer",
+        "desc": "Commit-Nachrichten, PR-Beschreibungen, Reviews, Konfliktlösung, geführte merges, Chat."
+      },
+      "daily": {
+        "title": "Im Alltag",
+        "desc": "PR-Review, CI-Checks, Stashes, Commit-Suche, Ctrl/⌘ + K-Palette."
+      }
+    },
+    "intro": {
+      "title": "Willkommen bei gitui",
+      "lead1": "Dein Tool für",
+      "leadStrong1": "Branch-Stacks",
+      "lead2": "(stacked PRs), lokal und kostenlos — im Graphite-Stil. Visualisiere deinen Branch-Baum,",
+      "lead3": "in Kaskade und öffne/aktualisiere deine GitHub-PRs."
+    },
+    "ai": {
+      "heading": "Aktiviere die KI-Funktionen",
+      "lead1": "Die KI-Helfer laufen über die CLI",
+      "lead2": "Für das beste Erlebnis installiere eine der beiden — nach Wahl:",
+      "claude": {
+        "title": "Claude Code (cloud)",
+        "desc": "Mit deinem Anthropic-Konto — Claude-Modelle."
+      },
+      "ollama": {
+        "title": "Ollama (lokal & kostenlos)",
+        "desc": "Lokale oder Ollama-Cloud-Modelle, ohne Anthropic-Konto."
+      },
+      "install": "Installieren",
+      "note1": "Du kannst Engine und Modell jederzeit in",
+      "noteSettings": "Einstellungen → KI",
+      "note2": "wählen."
+    },
+    "nav": {
+      "skip": "Überspringen",
+      "previous": "Zurück",
+      "startTour": "Tour starten",
+      "next": "Weiter"
+    }
+  },
+  "whatsNewDialog": {
+    "title": "Neuigkeiten — gitui {{version}}",
+    "close": "Schließen",
+    "gotIt": "Verstanden"
+  },
+  "workspaceGroupFilter": {
+    "allGroups": "Alle Gruppen",
+    "ungrouped": "Ohne Gruppe"
+  }
+}

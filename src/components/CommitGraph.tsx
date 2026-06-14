@@ -10,6 +10,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import * as dagre from "dagre";
+import { useTranslation } from "react-i18next";
 import type { CommitNode } from "../lib/types";
 import { CommitNodeCard } from "./CommitNodeCard";
 import { useThemePalette } from "../lib/theme";
@@ -30,6 +31,7 @@ export function CommitGraph({
   query: string;
   onSelect: (sha: string) => void;
 }) {
+  const { t } = useTranslation();
   const rf = useRef<ReactFlowInstance | null>(null);
   const palette = useThemePalette();
 
@@ -118,7 +120,7 @@ export function CommitGraph({
   if (commits.length === 0) {
     return (
       <div className="flex h-full items-center justify-center text-sm text-neutral-600">
-        No commits to display.
+        {t("commitGraph.empty")}
       </div>
     );
   }

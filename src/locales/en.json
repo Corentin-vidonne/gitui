@@ -1,0 +1,1041 @@
+{
+  "addRepoDialog": {
+    "title": "Add repository",
+    "pickOpenTitle": "Select an existing git repository",
+    "pickCloneDestTitle": "Choose where to clone the repository",
+    "tabs": {
+      "open": "Open existing",
+      "clone": "Clone from URL"
+    },
+    "openHint": "Pick a repository already cloned on your machine.",
+    "opening": "Opening…",
+    "chooseFolder": "Choose folder…",
+    "urlLabel": "Repository URL",
+    "cloneIntoLabel": "Clone into",
+    "chooseDestination": "Choose destination folder…",
+    "cloning": "Cloning…",
+    "clone": "Clone"
+  },
+  "app": {
+    "tour": {
+      "welcomeTitle": "Welcome 👋",
+      "welcomeBody": "A quick tour of the main features. You can close it any time (Esc).",
+      "viewsTitle": "Switch views",
+      "viewsBody": "Branch graph, commits, tree, PRs, issues, docs. (Shortcuts 1–6.)",
+      "stackActionsTitle": "Stack actions",
+      "stackActionsBody": "Sync updates, Restack rebases the stack, Undo reverts the last operation. (s / r / u)",
+      "newBranchTitle": "Create a branch",
+      "newBranchBody": "On top of the stack, with an AI-suggested name. (n)",
+      "submitTitle": "Submit",
+      "submitBody": "Push and open/update PRs; description written by AI. (p)",
+      "claudeTitle": "AI assistant",
+      "claudeBody": "Chat about the repo, generate messages, review code, guided merge.",
+      "stashTitle": "Stashes",
+      "stashBody": "See what each stash contains, apply it or delete it.",
+      "doneTitle": "You're all set 🚀",
+      "doneBody": "Ctrl/⌘ + K for the palette, ? for the shortcuts. The help page recaps everything."
+    },
+    "notify": {
+      "newUpdates": "{{count}} new updates"
+    },
+    "toast": {
+      "synced": "Synced ✓",
+      "undone": "Undone ✓",
+      "syncedRepos": "Synced {{ok}} repo(s) ✓",
+      "syncedReposPartial": "Synced {{ok}}, {{fail}} failed",
+      "reparented": "{{branch}} → {{newParent}}",
+      "submitted": "Submit done — {{summary}}"
+    },
+    "palette": {
+      "groupBranches": "Branches",
+      "groupActions": "Actions",
+      "groupViews": "Views",
+      "current": "current",
+      "trunk": "trunk",
+      "undoAction": "Undo: {{label}}",
+      "restackAll": "Restack all",
+      "newBranch": "New branch",
+      "stashes": "Stashes",
+      "commandLog": "Command log",
+      "askAi": "Ask {{name}}",
+      "settings": "Settings",
+      "shortcuts": "Keyboard shortcuts",
+      "help": "Help / Interactive guide",
+      "viewBranchGraph": "View: branch graph",
+      "viewCommitGraph": "View: commit graph",
+      "viewTree": "View: tree",
+      "viewPrs": "View: pull requests",
+      "viewIssues": "View: issues",
+      "viewDocs": "View: Markdown docs"
+    },
+    "guides": {
+      "viewGraph": {
+        "title": "Branch graph",
+        "body": "Here's your stack. Drag a branch onto another to re-parent it; the badges show status (CI, review, behind…)."
+      },
+      "viewCommits": {
+        "title": "Commit graph",
+        "body": "The commit DAG. Type here to filter by message / sha / author."
+      },
+      "commitSearch": {
+        "title": "Commit search",
+        "body": "Type: unmatched commits fade out and the view recenters on the results."
+      },
+      "commitOps": {
+        "title": "Commit actions",
+        "body": "Click a commit → detail panel: Summary/Detailed, AI Review, cherry-pick, and on hover reword (AI) / split / drop / squash / move."
+      },
+      "tree": {
+        "title": "Tree view",
+        "body": "The stack as a list. Hover a branch for its actions, click it for the detail."
+      },
+      "branchOps": {
+        "title": "Branch actions",
+        "body": "Hover a branch → checkout, set parent, restack, merge, track/untrack."
+      },
+      "prs": {
+        "title": "Pull requests",
+        "body": "Open a PR: Approve / Request changes / Comment, CI checks + logs, AI Review (postable as inline comments on the PR)."
+      },
+      "issues": {
+        "title": "Issues",
+        "body": "The list of issues and their detail."
+      },
+      "docs": {
+        "title": "Docs",
+        "body": "The repository's Markdown files."
+      },
+      "views": {
+        "title": "Views",
+        "body": "Click to switch views (or keys 1–6)."
+      },
+      "sync": {
+        "title": "Sync / Restack / Undo",
+        "body": "Sync updates, Restack rebases the stack, Undo reverts. Click to try it."
+      },
+      "newBranch": {
+        "title": "New branch",
+        "body": "Click to create a branch (AI-suggested name)."
+      },
+      "submit": {
+        "title": "Submit",
+        "body": "Push and open/update PRs. Click to see the plan and the AI-written description."
+      },
+      "claude": {
+        "title": "AI assistant",
+        "body": "Click to chat about the repo with Claude."
+      },
+      "stash": {
+        "title": "Stashes",
+        "body": "Here are your stashes: expand to see the files, then Apply / Pop / Drop."
+      },
+      "palette": {
+        "title": "Command palette",
+        "body": "Type a branch, a PR, an action… Enter to run, Esc to close."
+      },
+      "shortcuts": {
+        "title": "Keyboard shortcuts",
+        "body": "The list of shortcuts (you can also press ?)."
+      }
+    },
+    "sidebar": {
+      "tagline": "stacked PRs",
+      "workspace": "Workspace",
+      "repositories": "Repositories",
+      "newGroup": "New group",
+      "addRepository": "Add repository"
+    },
+    "footer": {
+      "ghNotLoggedIn": "gh: not logged in",
+      "toolsMissing": "Required tools are missing — click to view",
+      "tools": "tools"
+    },
+    "header": {
+      "settings": "Settings",
+      "workspaceTitle": "Workspace — repository links",
+      "loading": "Loading…",
+      "trunk": "trunk: {{trunk}}",
+      "prsUnavailable": "PRs unavailable",
+      "updatesCount": "{{count}} new update(s) across repos",
+      "checkUpdates": "Check for updates",
+      "stashCount": "{{count}} stash(es)",
+      "stashes": "Stashes",
+      "newBranch": "New branch",
+      "submitTitle": "Push branches and open/update PRs bottom-up",
+      "submitUnavailable": "Sign in with gh and add a GitHub remote to submit",
+      "askAiRepo": "Ask {{name}} (chat about the repo)",
+      "commandLogTitle": "Command log: see the git/gh commands the app runs",
+      "openInVscode": "Open repository in VS Code",
+      "noRepoSelected": "No repository selected"
+    },
+    "views": {
+      "branchGraph": "Branch graph",
+      "commitGraph": "Commit graph",
+      "tree": "Tree",
+      "pullRequests": "Pull requests",
+      "issues": "Issues",
+      "markdownDocs": "Markdown docs"
+    },
+    "actions": {
+      "syncTitle": "Sync: fetch + fast-forward the trunk + clean up merged PRs, then restack",
+      "restackTitle": "Restack the whole stack onto its parents",
+      "undoTitle": "Undo: {{label}}",
+      "nothingToUndo": "Nothing to undo"
+    },
+    "empty": {
+      "noRepoTitle": "No repository yet",
+      "noRepoBody": "Add a git repository to visualize and manage your stacked branches and pull requests.",
+      "noRepoBodyClassic": "Add a git repository to see your branch stack.",
+      "addRepository": "Add repository",
+      "loadingRepo": "Loading {{name}}…"
+    },
+    "commits": {
+      "searchPlaceholder": "Search a commit…"
+    },
+    "tree": {
+      "untrackedBranches": "Untracked branches"
+    },
+    "panel": {
+      "dragToResize": "Drag to resize"
+    },
+    "group": {
+      "newTitle": "New group",
+      "createAndMove": "Create & move",
+      "renameTitle": "Rename group",
+      "rename": "Rename"
+    }
+  },
+  "appUpdateBanner": {
+    "available": "is available",
+    "youHave": "you have {{version}}",
+    "updateViaPackageManager": "Update via your package manager.",
+    "update": "Update",
+    "updating": "Updating…",
+    "download": "Download",
+    "dismiss": "Dismiss"
+  },
+  "branchDetail": {
+    "trunkBadge": "trunk",
+    "rows": {
+      "parent": "Parent",
+      "untracked": "untracked",
+      "status": "Status",
+      "aheadBehind": "{{ahead}} ahead · {{behind}} behind",
+      "base": "Base",
+      "workingTree": "Working tree",
+      "uncommitted": "uncommitted changes",
+      "clean": "clean",
+      "remote": "Remote",
+      "unpushed": "unpushed commits",
+      "upToDate": "up to date"
+    },
+    "pr": {
+      "heading": "Pull request",
+      "viewDetails": "View PR details",
+      "openOnGithub": "Open on GitHub",
+      "none": "No PR yet."
+    },
+    "commits": {
+      "recent": "Recent commits",
+      "onThisBranch": "Commits on this branch",
+      "none": "No commits."
+    },
+    "commitActions": {
+      "reword": "Reword",
+      "split": "Split (split into two commits)",
+      "squash": "Squash into older commit",
+      "moveNewer": "Move newer",
+      "moveOlder": "Move older",
+      "drop": "Drop"
+    },
+    "actions": {
+      "checkout": "Checkout",
+      "newBranch": "New branch",
+      "merge": "Merge",
+      "publish": "Publish",
+      "restack": "Restack",
+      "setParent": "Set parent",
+      "untrack": "Untrack",
+      "track": "Track"
+    },
+    "reword": {
+      "title": "Reword commit",
+      "generate": "Generate",
+      "simple": "simple",
+      "complet": "full",
+      "simpleHint": "Short message (≤5 words), conventional prefix",
+      "completHint": "Full message (subject + body), conventional prefix"
+    },
+    "split": {
+      "title": "Split commit",
+      "introBefore": "Check the lines (or whole hunks / files) of the",
+      "introFirst": "first",
+      "introAfter": "commit, bottom of stack; the rest goes into the second. Like",
+      "analyzing": "Analyzing diff…",
+      "noSplittable": "No splittable lines (binary / file deletion). Use drop or squash instead.",
+      "checkAll": "Check all",
+      "uncheckAll": "Uncheck all",
+      "ordFirst": "st",
+      "ordSecond": "nd",
+      "commitWord": "commit",
+      "wholeFile": "Whole file",
+      "wholeHunk": "Whole hunk",
+      "msg1Before": "Message of the ",
+      "msg1After": "commit (checked lines)",
+      "msg2Before": "Message of the ",
+      "msg2After": "commit (the rest)",
+      "invalidHint": "Check at least one line (leave one for the 2nd) and fill in both messages"
+    },
+    "drop": {
+      "title": "Drop commit",
+      "confirmBefore": "Drop",
+      "confirmAfter": "? This rewrites the branch history."
+    }
+  },
+  "branchDialogs": {
+    "new": {
+      "title": "New branch",
+      "nameLabel": "Branch name",
+      "suggestTitle": "Suggest a name (AI, from your work in progress)",
+      "parentLabel": "Parent (base)"
+    },
+    "setParent": {
+      "title": "Set parent of {{branch}}",
+      "parentLabel": "Parent branch"
+    },
+    "merge": {
+      "title": "merge branches",
+      "sourceLabel": "Source (branch to merge)",
+      "targetLabel": "Target (receives the merge)",
+      "sameBranch": "Choose two different branches.",
+      "submit": "Merge assist"
+    }
+  },
+  "branchRow": {
+    "uncommitted": {
+      "title": "uncommitted changes",
+      "label": "uncommitted"
+    },
+    "actions": {
+      "checkout": "checkout this branch",
+      "publish": "Publish (push to origin)",
+      "newChild": "New branch on top",
+      "restack": "restack from here",
+      "setParent": "Set parent",
+      "untrack": "Untrack",
+      "track": "Track in stack"
+    },
+    "badges": {
+      "push": "local commits not pushed to origin",
+      "behind": "commits behind parent — restack needed",
+      "ahead": "commits ahead of parent"
+    }
+  },
+  "chatDock": {
+    "label": {
+      "repo": "repository"
+    },
+    "analyzing": "{{name}} is analyzing…",
+    "thinking": "{{name}} is thinking…",
+    "send": "Send (Enter)",
+    "placeholder": {
+      "ask": "Ask {{name}} a question…",
+      "starting": "Starting the session…"
+    },
+    "note": {
+      "authorized": "✓ Authorized: {{command}}",
+      "refused": "✗ Refused: {{command}}"
+    },
+    "approval": {
+      "title": "Authorization required",
+      "prompt": "{{name}} wants to run this command:",
+      "compoundWarning": "Compound command (chaining detected). If you authorize it, {{name}} will be prompted to run the commands one at a time — each one must be authorized separately.",
+      "refuse": "Refuse",
+      "authorize": "Authorize"
+    }
+  },
+  "commandLogDock": {
+    "title": "Command log",
+    "subtitle": "git / gh commands run by the app",
+    "clear": "Clear the log",
+    "empty": "No command yet. Run an action (restack, sync, submit…) — the git/gh commands that run will show up here."
+  },
+  "commandPalette": {
+    "groups": {
+      "pullRequests": "Pull requests",
+      "issues": "Issues"
+    },
+    "searchPlaceholder": "Go to a branch, PR, issue… or run an action",
+    "noResults": "No results"
+  },
+  "commentList": {
+    "review": {
+      "approved": "approved",
+      "changesRequested": "requested changes",
+      "commented": "commented",
+      "dismissed": "dismissed"
+    },
+    "noMessage": "(no message)",
+    "conversation": "Conversation ({{total}})",
+    "noMessages": "No messages yet."
+  },
+  "commitFilter": {
+    "allBranches": "All branches",
+    "someBranches": "{{selected}}/{{total}} branches",
+    "showBranches": "Show branches",
+    "all": "All"
+  },
+  "commitGraph": {
+    "empty": "No commits to display."
+  },
+  "commitPage": {
+    "backToGraph": "Back to graph (Esc)",
+    "summary": "Summary",
+    "summaryTitle": "Quick summary ({{ai}})",
+    "detailed": "Detailed",
+    "detailedTitle": "Detailed analysis",
+    "review": "AI Review",
+    "reviewTitle": "Structured AI review",
+    "cherryPickTitle": "Apply this commit on the chosen branch",
+    "reviewing": "Reviewing… (~30 s)",
+    "noFindings": "No issues found ✓",
+    "findings": "{{count}} finding(s) — annotated in the diff, badged in the tree."
+  },
+  "common": {
+    "cancel": "Cancel",
+    "save": "Save",
+    "close": "Close",
+    "delete": "Delete",
+    "remove": "Remove",
+    "confirm": "Confirm",
+    "loading": "Loading…",
+    "error": "Error",
+    "retry": "Retry",
+    "yes": "Yes",
+    "no": "No",
+    "ok": "OK",
+    "search": "Search",
+    "copy": "Copy",
+    "copied": "Copied",
+    "back": "Back",
+    "refresh": "Refresh",
+    "open": "Open",
+    "none": "None",
+    "edit": "Edit",
+    "create": "Create",
+    "apply": "Apply",
+    "validate": "Confirm",
+    "loadingEllipsis": "Loading…",
+    "comingSoon": "Coming soon"
+  },
+  "conflictPanel": {
+    "title": "Restack paused — resolve conflicts",
+    "onBranch": "on",
+    "description": {
+      "before": "Fix the conflicts in your editor and stage them (",
+      "after": "), then continue — or let the AI propose a resolution per file."
+    },
+    "resolveAll": {
+      "title": "Suggest and apply a resolution for every conflicted file",
+      "label": "AI resolve all ({{count}})"
+    },
+    "resolving": "Resolving…",
+    "suggest": {
+      "title": "Ask the AI to resolve this file",
+      "label": "AI suggest"
+    },
+    "retry": "Retry",
+    "previewResolved": "Preview resolved file",
+    "markersWarning": "The proposal still contains conflict markers — review manually before applying.",
+    "markersLeftError": "AI left conflict markers — resolve this one manually.",
+    "apply": {
+      "title": "Write this resolution and stage the file",
+      "titleMarkers": "Resolution still has conflict markers",
+      "label": "Apply"
+    },
+    "dismiss": "Dismiss",
+    "continueRestack": "Continue restack",
+    "abort": "Abort"
+  },
+  "dependencyGate": {
+    "tools": {
+      "git": {
+        "desc": "Essential: all operations on branches, commits and the stack."
+      },
+      "gh": {
+        "desc": "Pull requests, issues, CI checks and Submit."
+      }
+    },
+    "title": {
+      "missing": "Required tools missing",
+      "setup": "Tools setup"
+    },
+    "intro": {
+      "before": "gitui relies on these command-line tools. Install the ones that are missing, then click",
+      "after": "."
+    },
+    "install": "Install",
+    "recheck": "Recheck",
+    "continue": "Continue",
+    "claudeNote": "(AI aides) is checked when you launch an AI feature — no need to install it for the rest of the app.",
+    "auth": {
+      "title": "GitHub CLI not signed in",
+      "hint": "Sign in to access PRs and issues. Run this command in a terminal:"
+    },
+    "status": {
+      "ready": "Everything is ready ✨",
+      "missing": "{{count}} tool(s) missing",
+      "authRequired": "Sign-in required"
+    }
+  },
+  "diffExplorer": {
+    "viewMode": {
+      "unified": "Unified",
+      "split": "Side by side"
+    },
+    "severity": {
+      "critical": "Critical",
+      "warning": "Warn.",
+      "info": "Info"
+    },
+    "aiNotes": "AI notes:",
+    "aiNotesCount": "{{count}} AI note(s)",
+    "hideSeverity": "Hide “{{label}}”",
+    "showSeverity": "Show “{{label}}”",
+    "shownCount": "{{shown}}/{{total}} shown",
+    "fileCount": "{{count}} file(s)",
+    "noChanges": "No changes.",
+    "noTextDiff": "No text diff for this file (binary or rename).",
+    "selectFile": "Select a file on the left."
+  },
+  "digestBanner": {
+    "header": "Since your last visit · {{count}} new item(s)",
+    "summarizing": "Summarizing…",
+    "more": "… and {{count}} more",
+    "markSeen": "Mark as seen",
+    "seen": "Seen",
+    "dismiss": "Hide for now"
+  },
+  "docsView": {
+    "new": "New",
+    "newFileTitle": "New .md file",
+    "noFiles": "No .md files.",
+    "pathPlaceholder": "path/to/file.md",
+    "commitOnBranch": "Commit on branch",
+    "committing": "Committing…",
+    "createAndCommit": "Create & commit",
+    "contentPlaceholder": "# Title\n\nWrite Markdown here…",
+    "previewPlaceholder": "*Preview*",
+    "rendered": "Rendered",
+    "raw": "Raw",
+    "emptyState": "Select a .md file, or create a new one."
+  },
+  "graphNode": {
+    "untracked": "untracked",
+    "uncommittedChanges": "uncommitted changes",
+    "unpushedCommits": "unpushed commits",
+    "ciStatus": "CI {{status}}"
+  },
+  "groupNameDialog": {
+    "placeholder": "Group name"
+  },
+  "groupSection": {
+    "ungrouped": "Ungrouped",
+    "updatesInGroup": "{{count}} new update(s) in this group",
+    "updatesCount": "{{count}} new update(s)",
+    "menu": {
+      "actions": "Group actions",
+      "rename": "Rename",
+      "syncing": "Syncing…",
+      "syncGroup": "Sync group",
+      "deleteGroup": "Delete group"
+    }
+  },
+  "helpPage": {
+    "test": "Try it",
+    "testTitle": "Launch a guide to try this feature",
+    "headerTitle": "Everything gitui does",
+    "replayGuide": "Replay the guide",
+    "intro": {
+      "before": "gitui is a",
+      "stacks": "branch stacks",
+      "middle1": "tool (stacked PRs). Click",
+      "middle2": "next to a feature to see it in action in the app, or",
+      "after": "for the general tour."
+    },
+    "sections": {
+      "views": {
+        "title": "Views",
+        "branchGraph": {
+          "name": "Branch graph",
+          "desc": "the stack tree; drag one branch onto another to re-parent it"
+        },
+        "commitGraph": {
+          "name": "Commit graph",
+          "desc": "the commit DAG, with search and filter"
+        },
+        "tree": {
+          "name": "Tree",
+          "desc": "the stack as a list, with per-branch actions"
+        },
+        "prs": {
+          "name": "Pull requests",
+          "desc": "list and detail, review, CI checks"
+        },
+        "issues": {
+          "name": "Issues",
+          "desc": "list and detail of issues"
+        },
+        "docs": {
+          "name": "Docs",
+          "desc": "the repo's Markdown files"
+        }
+      },
+      "branches": {
+        "title": "Branches",
+        "newBranch": {
+          "name": "New branch",
+          "desc": "at the top of the stack (name suggested by AI ✨)"
+        },
+        "branchOps": {
+          "name": "checkout / Set parent / Track / Untrack",
+          "desc": "manage the place in the stack"
+        },
+        "restack": {
+          "name": "Restack",
+          "desc": "rebase a branch onto its parent"
+        },
+        "merge": {
+          "name": "Merge",
+          "desc": "merge two branches via the assistant"
+        }
+      },
+      "commits": {
+        "title": "Commits",
+        "reword": {
+          "name": "Reword",
+          "desc": "rewrite the message (AI generation ✨)"
+        },
+        "split": {
+          "name": "Split",
+          "desc": "split a commit in two, by file"
+        },
+        "dropSquashMove": {
+          "name": "Drop / Squash / Move",
+          "desc": "delete, merge, reorder"
+        },
+        "cherryPick": {
+          "name": "Cherry-pick",
+          "desc": "apply a commit onto another branch"
+        },
+        "aiReview": {
+          "name": "AI Review",
+          "desc": "structured review of a commit"
+        }
+      },
+      "stack": {
+        "title": "The stack",
+        "sync": {
+          "name": "Sync",
+          "desc": "fetch + fast-forward + PR cleanup + restack"
+        },
+        "restackAll": {
+          "name": "Restack all",
+          "desc": "rebase the whole stack"
+        },
+        "submit": {
+          "name": "Submit",
+          "desc": "push and open/update the PRs (AI description ✨)"
+        },
+        "undo": {
+          "name": "Undo",
+          "desc": "undo the last operation that rewrites history"
+        }
+      },
+      "stashes": {
+        "title": "Stashes",
+        "viewContent": {
+          "name": "View content",
+          "desc": "the file list of each stash"
+        },
+        "applyPopDrop": {
+          "name": "Apply / Pop / Drop",
+          "desc": "apply, apply+remove, remove"
+        },
+        "stasher": {
+          "name": "Stasher",
+          "desc": "set aside the current changes"
+        }
+      },
+      "ai": {
+        "title": "AI assistant (Claude)",
+        "summaryDetailed": {
+          "name": "Summary / Detailed",
+          "desc": "analysis of a commit or a PR"
+        },
+        "askClaude": {
+          "name": "Ask Claude",
+          "desc": "free chat about the whole repo"
+        },
+        "mergeHelp": {
+          "name": "Merge help",
+          "desc": "guides the merge with command approval"
+        },
+        "resolveConflicts": {
+          "name": "Resolve conflicts",
+          "desc": "AI suggestion per file, or all at once (during restack)"
+        },
+        "digest": {
+          "name": "Digest",
+          "desc": "a \"since your last visit\" summary on open"
+        }
+      },
+      "pullRequests": {
+        "title": "Pull requests",
+        "review": {
+          "name": "Review",
+          "desc": "Approve / Request changes / Comment"
+        },
+        "ciChecks": {
+          "name": "CI checks",
+          "desc": "see each check, open its logs; completion notification"
+        },
+        "badges": {
+          "name": "Badges",
+          "desc": "PR, CI, review, ahead/behind state — at a glance"
+        }
+      },
+      "productivity": {
+        "title": "Productivity",
+        "commandPalette": {
+          "name": "Command palette",
+          "desc": "Ctrl/⌘ + K: go somewhere or run an action"
+        },
+        "shortcuts": {
+          "name": "Keyboard shortcuts",
+          "desc": "? for help; 1–6 views; s/r/n/p/u actions"
+        },
+        "commitSearch": {
+          "name": "Commit search",
+          "desc": "filter the graph by message / sha / author"
+        }
+      },
+      "settings": {
+        "title": "Settings",
+        "theme": {
+          "name": "Theme",
+          "desc": "Classic / Modern"
+        },
+        "assistantUi": {
+          "name": "Assistant interface",
+          "desc": "Chat (bubbles) or Terminal; progressive response"
+        },
+        "aiBackend": {
+          "name": "AI backend",
+          "desc": "Claude (Anthropic cloud) or Ollama (free local models)"
+        },
+        "notifications": {
+          "name": "Notifications",
+          "desc": "PRs/issues/CI activity + polling interval"
+        }
+      }
+    }
+  },
+  "issueDetailPanel": {
+    "by": "by {{author}}"
+  },
+  "issuesList": {
+    "states": {
+      "open": "open",
+      "closed": "closed",
+      "all": "all"
+    },
+    "empty": "No {{state}} issues.",
+    "emptyAll": "No issues."
+  },
+  "moveToMenu": {
+    "moveToGroup": "Move to group",
+    "ungrouped": "Ungrouped",
+    "newGroup": "New group…"
+  },
+  "prBadge": {
+    "openOnGitHub": "open on GitHub"
+  },
+  "prList": {
+    "states": {
+      "open": "open",
+      "merged": "merged",
+      "closed": "closed",
+      "all": "all"
+    },
+    "empty": "No {{state}} pull requests.",
+    "emptyAll": "No pull requests.",
+    "draft": "draft"
+  },
+  "prPage": {
+    "header": {
+      "backTitle": "Back to the list (Esc)",
+      "openOnGitHub": "Open on GitHub"
+    },
+    "actions": {
+      "summary": "Summary",
+      "summaryTitle": "Quick summary",
+      "detailed": "Detailed",
+      "detailedTitle": "Detailed review",
+      "review": "AI Review",
+      "reviewTitle": "Structured AI review (Discussion tab)",
+      "merge": "Merge",
+      "mergeTitle": "Merge this PR directly (gh pr merge), then resync the stack",
+      "mergeAssist": "Merge help",
+      "mergeAssistTitle": "Guided merge assistant ({{ai}})"
+    },
+    "tabs": {
+      "files": "Files",
+      "filesCount": "Files ({{count}})",
+      "discussion": "Discussion"
+    },
+    "review": {
+      "reviewing": "Reviewing… (~30 s)",
+      "noFindings": "No issues found ✓",
+      "viewFile": "View the affected file",
+      "post": "Post on the PR",
+      "postTitle": "Post this review on the PR: inline comments + summary, in “comment” mode"
+    },
+    "humanReview": {
+      "heading": "Review",
+      "placeholder": "Comment (required for “changes” / “comment”)",
+      "approve": "Approve",
+      "requestChanges": "Changes",
+      "comment": "Comment",
+      "addComment": "Add a comment"
+    },
+    "checks": {
+      "button": "CI checks",
+      "empty": "No checks reported.",
+      "viewLogs": "View logs on GitHub"
+    },
+    "description": "Description",
+    "commits": "Commits ({{count}})",
+    "merge": {
+      "notice": "PR merged ✓ — stack resynced.",
+      "confirmTitle": "Merge pull request #{{number}}?",
+      "stackedWarning": {
+        "before": "This PR is stacked on",
+        "middle": ", not on the trunk",
+        "after": ". In a stack, merge the parent PRs first."
+      },
+      "ciWarning": "CI failed or review missing — GitHub may refuse the merge.",
+      "method": "Method",
+      "methods": {
+        "squash": {
+          "label": "Squash",
+          "hint": "a single commit on the trunk (recommended for a stack)"
+        },
+        "merge": {
+          "label": "Merge commit",
+          "hint": "keeps the branch history"
+        },
+        "rebase": {
+          "label": "Rebase",
+          "hint": "replays the commits on the base"
+        }
+      },
+      "deleteBranch": {
+        "label": "Delete the remote branch after the merge",
+        "hint": "Leave unchecked while child PRs are stacked on this branch."
+      }
+    }
+  },
+  "repoGraphView": {
+    "analyzing": "Analyzing repositories…",
+    "empty": "Add repositories to see the links between them."
+  },
+  "settingsModal": {
+    "title": "Settings",
+    "tabs": {
+      "general": "General",
+      "ai": "AI",
+      "about": "Help"
+    },
+    "themes": {
+      "classic": {
+        "label": "Classic",
+        "hint": "Neutral dark · indigo"
+      },
+      "modern": {
+        "label": "Modern",
+        "hint": "Ink blue · teal"
+      }
+    },
+    "general": {
+      "language": "Language",
+      "languageAuto": "Automatic ({{lang}})",
+      "languageHint": "By default, the app follows your machine's language. Applies immediately.",
+      "appearance": "Appearance",
+      "appearanceHint": "Applies immediately. The classic theme stays available at any time.",
+      "pollInterval": "Polling interval (seconds)",
+      "pollIntervalHint": "How often gitui checks for commits, PRs and issues. Minimum 30s.",
+      "notifications": "Desktop notifications for new activity"
+    },
+    "ai": {
+      "model": "Model",
+      "chatStreaming": "Progressive response (typewriter effect)",
+      "assistantUi": {
+        "label": "Assistant interface (Summary / Detailed)",
+        "chat": "Chat",
+        "chatHint": "Conversation bubbles",
+        "terminal": "Terminal",
+        "terminalHint": "Raw Claude terminal",
+        "hint": "Chat talks to Claude without showing the terminal. In chat mode, merges ask for approval before each command that writes."
+      },
+      "backend": {
+        "label": "AI backend (claude engine)",
+        "anthropic": "Claude (cloud)",
+        "anthropicHint": "Anthropic API · your login",
+        "ollama": "Ollama (local)",
+        "ollamaHint": "Local models, free"
+      },
+      "anthropic": {
+        "modelPlaceholder": "account default",
+        "modelHintPre": "Alias (",
+        "modelHintPost": ") or full name. Empty = your Claude account's default model."
+      },
+      "ollama": {
+        "host": "Ollama host",
+        "detect": "Detect",
+        "detected": "{{count}} model(s) detected.",
+        "noModels": "No model — `ollama pull qwen3-coder` (local) or `ollama launch claude` (cloud).",
+        "hintPre": "The",
+        "hintMid": " CLI is still required (it's the engine); Ollama just provides the model — local (",
+        "hintMid2": ") or cloud (",
+        "hintMid3": ", models",
+        "hintPost": ")."
+      }
+    },
+    "about": {
+      "intro": "Documentation, interactive guide and environment check.",
+      "help": "Everything the app does — and interactive guide",
+      "checkTools": "Check the tools (git, gh, Claude Code)"
+    }
+  },
+  "shortcutsHelp": {
+    "title": "Keyboard shortcuts",
+    "commandPalette": "Command palette",
+    "showHelp": "Show this help",
+    "views": "View: graph · commits · tree · PRs · issues · docs",
+    "newBranch": "New branch",
+    "singleKeyNote": "Single-key shortcuts are ignored while typing in a field."
+  },
+  "sidebar": {
+    "empty": "No repository yet."
+  },
+  "spinner": {
+    "loading": "Loading"
+  },
+  "stashModal": {
+    "title": "Stashes",
+    "messagePlaceholder": "Message (optional)",
+    "includeUntrackedTitle": "Include untracked files",
+    "untracked": "untracked",
+    "push": "Stash",
+    "pushTitle": "Stash the current changes",
+    "pushNothingTitle": "No changes to stash",
+    "empty": "No stash.",
+    "apply": "Apply",
+    "applyTitle": "Apply (keep the stash)",
+    "pop": "Pop",
+    "popTitle": "Apply then remove",
+    "drop": "Drop",
+    "dropTitle": "Remove this stash",
+    "noFiles": "(no file detected)"
+  },
+  "submitDialog": {
+    "title": "Submit stack",
+    "loadingPlan": "Loading plan…",
+    "nothingToSubmit": "Nothing to submit — no tracked branches.",
+    "badge": {
+      "newPr": "new PR",
+      "updateBase": "update base",
+      "upToDate": "up to date"
+    },
+    "prTitlePlaceholder": "PR title",
+    "prBodyPlaceholder": "PR description (Markdown, optional)",
+    "describe": "Describe",
+    "describeTitle": "Generate title + description (AI, from the branch commits)",
+    "createAsDraft": "Create new PRs as draft",
+    "submitting": "Submitting…",
+    "summary": {
+      "created": "{{count}} PR created",
+      "updated": "{{count}} updated",
+      "submitted": "submitted"
+    }
+  },
+  "terminalDock": {
+    "sessionEnded": "session ended",
+    "repo": "repository"
+  },
+  "tour": {
+    "previous": "Previous",
+    "next": "Next"
+  },
+  "welcomeScreen": {
+    "features": {
+      "heading": "What you can do",
+      "stack": {
+        "title": "Visualize & reorganize your stack",
+        "desc": "Branch tree, drag-and-drop to re-parent, commit graph."
+      },
+      "restack": {
+        "title": "Restack · Sync · Submit",
+        "desc": "Cascading rebase, fast-forward, push + open/update GitHub PRs — and Undo."
+      },
+      "ai": {
+        "title": "AI helpers",
+        "desc": "Commit messages, PR descriptions, reviews, conflict resolution, guided merges, chat."
+      },
+      "daily": {
+        "title": "Day to day",
+        "desc": "PR review, CI checks, stashes, commit search, Ctrl/⌘ + K palette."
+      }
+    },
+    "intro": {
+      "title": "Welcome to gitui",
+      "lead1": "Your",
+      "leadStrong1": "branch stacks",
+      "lead2": "(stacked PRs) tool, local and free — Graphite-style. Visualize your branch tree,",
+      "lead3": "in cascade, and open/update your GitHub PRs."
+    },
+    "ai": {
+      "heading": "Enable the AI features",
+      "lead1": "The AI helpers run through the CLI",
+      "lead2": "For the best experience, install one of the two — your choice:",
+      "claude": {
+        "title": "Claude Code (cloud)",
+        "desc": "With your Anthropic account — Claude models."
+      },
+      "ollama": {
+        "title": "Ollama (local & free)",
+        "desc": "Local or Ollama cloud models, no Anthropic account."
+      },
+      "install": "Install",
+      "note1": "You can pick the engine and model in",
+      "noteSettings": "Settings → AI",
+      "note2": "at any time."
+    },
+    "nav": {
+      "skip": "Skip",
+      "previous": "Previous",
+      "startTour": "Start the tour",
+      "next": "Next"
+    }
+  },
+  "whatsNewDialog": {
+    "title": "What's new — gitui {{version}}",
+    "close": "Close",
+    "gotIt": "Got it"
+  },
+  "workspaceGroupFilter": {
+    "allGroups": "All groups",
+    "ungrouped": "Ungrouped"
+  }
+}

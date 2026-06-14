@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { UNGROUPED, type GroupSection as SectionData, type RepoGroup } from "../lib/groups";
 import type { UpdateItem } from "../lib/types";
 import { GroupSection } from "./GroupSection";
@@ -40,6 +41,7 @@ export function Sidebar({
   onDeleteGroup: (id: string) => void;
   onSyncGroup: (id: string) => void;
 }) {
+  const { t } = useTranslation();
   const [dragPath, setDragPath] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<string | null>(null);
 
@@ -82,7 +84,7 @@ export function Sidebar({
   return (
     <div className="flex-1 overflow-auto px-2 pb-2">
       {total === 0 ? (
-        <div className="px-2 text-sm text-neutral-600">No repository yet.</div>
+        <div className="px-2 text-sm text-neutral-600">{t("sidebar.empty")}</div>
       ) : realGroups.length === 0 ? (
         <GroupSection {...common(ungrouped)} hideHeader />
       ) : (

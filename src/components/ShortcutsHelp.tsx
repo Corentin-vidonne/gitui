@@ -1,21 +1,23 @@
+import { useTranslation } from "react-i18next";
 import { Modal } from "./Modal";
 
-const SHORTCUTS: [string, string][] = [
-  ["Ctrl / ⌘ + K", "Palette de commandes"],
-  ["?", "Afficher cette aide"],
-  ["1 – 6", "Vue : graphe · commits · tree · PRs · issues · docs"],
+const SHORTCUTS = (t: (key: string) => string): [string, string][] => [
+  ["Ctrl / ⌘ + K", t("shortcutsHelp.commandPalette")],
+  ["?", t("shortcutsHelp.showHelp")],
+  ["1 – 6", t("shortcutsHelp.views")],
   ["s", "Sync"],
   ["r", "Restack all"],
-  ["n", "Nouvelle branche"],
+  ["n", t("shortcutsHelp.newBranch")],
   ["p", "Submit"],
   ["u", "Undo"],
 ];
 
 export function ShortcutsHelp({ onClose }: { onClose: () => void }) {
+  const { t } = useTranslation();
   return (
-    <Modal title="Raccourcis clavier" onClose={onClose}>
+    <Modal title={t("shortcutsHelp.title")} onClose={onClose}>
       <ul className="space-y-1.5">
-        {SHORTCUTS.map(([k, label]) => (
+        {SHORTCUTS(t).map(([k, label]) => (
           <li key={k} className="flex items-center justify-between gap-4 text-sm">
             <span className="text-neutral-300">{label}</span>
             <kbd className="shrink-0 rounded border border-neutral-700 bg-neutral-950 px-1.5 py-0.5 font-mono text-[11px] text-neutral-400">
@@ -25,7 +27,7 @@ export function ShortcutsHelp({ onClose }: { onClose: () => void }) {
         ))}
       </ul>
       <p className="mt-3 text-[11px] text-neutral-500">
-        Les raccourcis à une touche sont ignorés pendant la saisie dans un champ.
+        {t("shortcutsHelp.singleKeyNote")}
       </p>
     </Modal>
   );

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Sparkles, Loader2 } from "lucide-react";
 import { Modal } from "./Modal";
 import { api, errorText } from "../lib/api";
@@ -19,6 +20,7 @@ export function NewBranchDialog({
   onSubmit: (name: string, parent: string) => void;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const [name, setName] = useState("");
   const [par, setPar] = useState(parent);
   const [suggesting, setSuggesting] = useState(false);
@@ -37,7 +39,7 @@ export function NewBranchDialog({
   }
 
   return (
-    <Modal title="New branch" onClose={onClose}>
+    <Modal title={t("branchDialogs.new.title")} onClose={onClose}>
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -46,7 +48,7 @@ export function NewBranchDialog({
         className="space-y-3"
       >
         <div>
-          <label className="mb-1 block text-xs text-neutral-400">Branch name</label>
+          <label className="mb-1 block text-xs text-neutral-400">{t("branchDialogs.new.nameLabel")}</label>
           <div className="flex gap-2">
             <input
               autoFocus
@@ -59,7 +61,7 @@ export function NewBranchDialog({
               type="button"
               onClick={suggest}
               disabled={suggesting}
-              title="Suggérer un nom (IA, depuis tes changements en cours)"
+              title={t("branchDialogs.new.suggestTitle")}
               className="inline-flex shrink-0 items-center gap-1 rounded-md border border-indigo-700 px-2.5 text-xs text-indigo-300 hover:bg-indigo-950/40 disabled:opacity-50"
             >
               {suggesting ? (
@@ -74,7 +76,7 @@ export function NewBranchDialog({
           )}
         </div>
         <div>
-          <label className="mb-1 block text-xs text-neutral-400">Parent (base)</label>
+          <label className="mb-1 block text-xs text-neutral-400">{t("branchDialogs.new.parentLabel")}</label>
           <select value={par} onChange={(e) => setPar(e.target.value)} className={inputClass}>
             {branches.map((b) => (
               <option key={b} value={b}>
@@ -89,14 +91,14 @@ export function NewBranchDialog({
             onClick={onClose}
             className="rounded-md px-3 py-1.5 text-sm text-neutral-400 hover:bg-neutral-800"
           >
-            Cancel
+            {t("common.cancel")}
           </button>
           <button
             type="submit"
             disabled={!name.trim()}
             className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
           >
-            Create
+            {t("common.create")}
           </button>
         </div>
       </form>
@@ -117,13 +119,14 @@ export function SetParentDialog({
   onSubmit: (parent: string) => void;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const options = branches.filter((b) => b !== branch);
   const [par, setPar] = useState(
     current && options.includes(current) ? current : options[0] ?? ""
   );
 
   return (
-    <Modal title={`Set parent of ${branch}`} onClose={onClose}>
+    <Modal title={t("branchDialogs.setParent.title", { branch })} onClose={onClose}>
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -132,7 +135,7 @@ export function SetParentDialog({
         className="space-y-3"
       >
         <div>
-          <label className="mb-1 block text-xs text-neutral-400">Parent branch</label>
+          <label className="mb-1 block text-xs text-neutral-400">{t("branchDialogs.setParent.parentLabel")}</label>
           <select
             autoFocus
             value={par}
@@ -152,14 +155,14 @@ export function SetParentDialog({
             onClick={onClose}
             className="rounded-md px-3 py-1.5 text-sm text-neutral-400 hover:bg-neutral-800"
           >
-            Cancel
+            {t("common.cancel")}
           </button>
           <button
             type="submit"
             disabled={!par}
             className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
           >
-            Save
+            {t("common.save")}
           </button>
         </div>
       </form>
@@ -181,6 +184,7 @@ export function MergeBranchDialog({
   onSubmit: (source: string, target: string) => void;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const [src, setSrc] = useState(source);
   const [tgt, setTgt] = useState(
     current && current !== source ? current : branches.find((b) => b !== source) ?? ""
@@ -188,7 +192,7 @@ export function MergeBranchDialog({
   const invalid = !src || !tgt || src === tgt;
 
   return (
-    <Modal title="Merge branches" onClose={onClose}>
+    <Modal title={t("branchDialogs.merge.title")} onClose={onClose}>
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -197,7 +201,7 @@ export function MergeBranchDialog({
         className="space-y-3"
       >
         <div>
-          <label className="mb-1 block text-xs text-neutral-400">Source (branche à merger)</label>
+          <label className="mb-1 block text-xs text-neutral-400">{t("branchDialogs.merge.sourceLabel")}</label>
           <select
             autoFocus
             value={src}
@@ -212,7 +216,7 @@ export function MergeBranchDialog({
           </select>
         </div>
         <div>
-          <label className="mb-1 block text-xs text-neutral-400">Cible (reçoit le merge)</label>
+          <label className="mb-1 block text-xs text-neutral-400">{t("branchDialogs.merge.targetLabel")}</label>
           <select value={tgt} onChange={(e) => setTgt(e.target.value)} className={inputClass}>
             {branches.map((b) => (
               <option key={b} value={b}>
@@ -222,7 +226,7 @@ export function MergeBranchDialog({
           </select>
         </div>
         {src === tgt && (
-          <p className="text-xs text-amber-400">Choisis deux branches différentes.</p>
+          <p className="text-xs text-amber-400">{t("branchDialogs.merge.sameBranch")}</p>
         )}
         <div className="flex justify-end gap-2 pt-1">
           <button
@@ -230,14 +234,14 @@ export function MergeBranchDialog({
             onClick={onClose}
             className="rounded-md px-3 py-1.5 text-sm text-neutral-400 hover:bg-neutral-800"
           >
-            Cancel
+            {t("common.cancel")}
           </button>
           <button
             type="submit"
             disabled={invalid}
             className="rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
           >
-            Aide au merge
+            {t("branchDialogs.merge.submit")}
           </button>
         </div>
       </form>

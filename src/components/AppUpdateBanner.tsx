@@ -3,6 +3,7 @@ import { check, type Update } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { DownloadCloud, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { api } from "../lib/api";
 
 // Where package-manager users (deb / rpm / pacman) go to grab the new build.
@@ -14,6 +15,7 @@ const RELEASES_URL = "https://github.com/Corentin-vidonne/gitui/releases/latest"
 // updates via apt/dnf/pacman. The version check (`check()`) runs on every platform — its fetch
 // happens in Rust, so the webview CSP doesn't need to allow GitHub.
 export function AppUpdateBanner() {
+  const { t } = useTranslation();
   const [update, setUpdate] = useState<Update | null>(null);
   const [channel, setChannel] = useState<"updater" | "manager">("updater");
   const [busy, setBusy] = useState(false);
@@ -60,12 +62,15 @@ export function AppUpdateBanner() {
     <div className="fixed inset-x-0 top-0 z-[60] flex items-center justify-center gap-3 border-b border-indigo-500/30 bg-indigo-950/95 px-4 py-2 text-sm text-indigo-100 shadow-lg backdrop-blur">
       <DownloadCloud className="h-4 w-4 shrink-0 text-indigo-300" />
       <span>
-        gitui <b>{update.version}</b> est disponible
-        {update.currentVersion ? ` — tu as ${update.currentVersion}` : ""}.
+        gitui <b>{update.version}</b> {t("appUpdateBanner.available")}
+        {update.currentVersion
+          ? ` — ${t("appUpdateBanner.youHave", { version: update.currentVersion })}`
+          : ""}
+        .
         {channel === "manager" && (
           <span className="text-indigo-300/80">
             {" "}
-            Mets à jour via ton gestionnaire de paquets.
+            {t("appUpdateBanner.updateViaPackageManager")}
           </span>
         )}
         {error && <span className="ml-2 text-red-300">{error}</span>}
@@ -76,19 +81,19 @@ export function AppUpdateBanner() {
           disabled={busy}
           className="shrink-0 rounded-md bg-indigo-600 px-3 py-1 text-xs font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
         >
-          {busy ? "Mise à jour…" : "Mettre à jour"}
+          {busy ? t("appUpdateBanner.updating") : t("appUpdateBanner.update")}
         </button>
       ) : (
         <button
           onClick={() => void openUrl(RELEASES_URL)}
           className="shrink-0 rounded-md bg-indigo-600 px-3 py-1 text-xs font-medium text-white hover:bg-indigo-500"
         >
-          Télécharger
+          {t("appUpdateBanner.download")}
         </button>
       )}
       <button
         onClick={() => setDismissed(true)}
-        title="Ignorer"
+        title={t("appUpdateBanner.dismiss")}
         className="shrink-0 rounded p-1 text-indigo-300 hover:bg-indigo-900/60"
       >
         <X className="h-3.5 w-3.5" />

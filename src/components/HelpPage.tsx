@@ -1,4 +1,5 @@
 import { X, Sparkles } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 type Item = { id?: string; name: string; desc: string };
 
@@ -11,6 +12,7 @@ function Section({
   items: Item[];
   onTest: (id: string) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="mb-4">
       <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-indigo-300/80">
@@ -26,10 +28,10 @@ function Section({
             {it.id && (
               <button
                 onClick={() => onTest(it.id as string)}
-                title="Lancer un guide pour essayer cette fonction"
+                title={t("helpPage.testTitle")}
                 className="shrink-0 rounded border border-indigo-700 px-2 py-0.5 text-[11px] font-medium text-indigo-300 hover:bg-indigo-950/40"
               >
-                Tester
+                {t("helpPage.test")}
               </button>
             )}
           </li>
@@ -50,6 +52,7 @@ export function HelpPage({
   onStartTour: () => void;
   onTest: (id: string) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div
       className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 p-4 pt-[6vh]"
@@ -60,12 +63,12 @@ export function HelpPage({
         onClick={(e) => e.stopPropagation()}
       >
         <header className="flex items-center gap-2 border-b border-neutral-800 px-5 py-3">
-          <h2 className="text-sm font-semibold text-neutral-100">Tout ce que fait gitui</h2>
+          <h2 className="text-sm font-semibold text-neutral-100">{t("helpPage.headerTitle")}</h2>
           <button
             onClick={onStartTour}
             className="ml-auto inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-indigo-500"
           >
-            <Sparkles className="h-3.5 w-3.5" /> Revoir le guide
+            <Sparkles className="h-3.5 w-3.5" /> {t("helpPage.replayGuide")}
           </button>
           <button
             onClick={onClose}
@@ -77,101 +80,104 @@ export function HelpPage({
 
         <div className="overflow-auto px-5 py-4">
           <p className="mb-4 text-sm text-neutral-400">
-            gitui est un outil de <strong className="text-neutral-200">piles de branches</strong>{" "}
-            (stacked PRs). Clique <strong className="text-indigo-300">Tester</strong> à côté d'une
-            fonction pour la voir en action dans l'app, ou{" "}
-            <strong className="text-indigo-300">Revoir le guide</strong> pour le tour général.
+            {t("helpPage.intro.before")}{" "}
+            <strong className="text-neutral-200">{t("helpPage.intro.stacks")}</strong>{" "}
+            {t("helpPage.intro.middle1")}{" "}
+            <strong className="text-indigo-300">{t("helpPage.test")}</strong>{" "}
+            {t("helpPage.intro.middle2")}{" "}
+            <strong className="text-indigo-300">{t("helpPage.replayGuide")}</strong>{" "}
+            {t("helpPage.intro.after")}
           </p>
 
           <Section
-            title="Vues"
+            title={t("helpPage.sections.views.title")}
             onTest={onTest}
             items={[
-              { id: "view-graph", name: "Branch graph", desc: "l'arbre de la pile ; glisse une branche sur une autre pour la re-parenter" },
-              { id: "view-commits", name: "Commit graph", desc: "le DAG des commits, avec recherche et filtre" },
-              { id: "tree", name: "Tree", desc: "la pile en liste, avec les actions par branche" },
-              { id: "prs", name: "Pull requests", desc: "liste et détail, relecture, checks CI" },
-              { id: "issues", name: "Issues", desc: "liste et détail des issues" },
-              { id: "docs", name: "Docs", desc: "les fichiers Markdown du dépôt" },
+              { id: "view-graph", name: t("helpPage.sections.views.branchGraph.name"), desc: t("helpPage.sections.views.branchGraph.desc") },
+              { id: "view-commits", name: t("helpPage.sections.views.commitGraph.name"), desc: t("helpPage.sections.views.commitGraph.desc") },
+              { id: "tree", name: t("helpPage.sections.views.tree.name"), desc: t("helpPage.sections.views.tree.desc") },
+              { id: "prs", name: t("helpPage.sections.views.prs.name"), desc: t("helpPage.sections.views.prs.desc") },
+              { id: "issues", name: t("helpPage.sections.views.issues.name"), desc: t("helpPage.sections.views.issues.desc") },
+              { id: "docs", name: t("helpPage.sections.views.docs.name"), desc: t("helpPage.sections.views.docs.desc") },
             ]}
           />
           <Section
-            title="Branches"
+            title={t("helpPage.sections.branches.title")}
             onTest={onTest}
             items={[
-              { id: "new-branch", name: "Nouvelle branche", desc: "au sommet de la pile (nom suggéré par l'IA ✨)" },
-              { id: "branch-ops", name: "Checkout / Set parent / Track / Untrack", desc: "gérer la place dans la pile" },
-              { id: "branch-ops", name: "Restack", desc: "rebaser une branche sur son parent" },
-              { id: "branch-ops", name: "Merge", desc: "fusionner deux branches via l'assistant" },
+              { id: "new-branch", name: t("helpPage.sections.branches.newBranch.name"), desc: t("helpPage.sections.branches.newBranch.desc") },
+              { id: "branch-ops", name: t("helpPage.sections.branches.branchOps.name"), desc: t("helpPage.sections.branches.branchOps.desc") },
+              { id: "branch-ops", name: t("helpPage.sections.branches.restack.name"), desc: t("helpPage.sections.branches.restack.desc") },
+              { id: "branch-ops", name: t("helpPage.sections.branches.merge.name"), desc: t("helpPage.sections.branches.merge.desc") },
             ]}
           />
           <Section
-            title="Commits"
+            title={t("helpPage.sections.commits.title")}
             onTest={onTest}
             items={[
-              { id: "commit-ops", name: "Reword", desc: "ré-écrire le message (génération IA ✨)" },
-              { id: "commit-ops", name: "Split", desc: "découper un commit en deux, par fichier" },
-              { id: "commit-ops", name: "Drop / Squash / Move", desc: "supprimer, fusionner, réordonner" },
-              { id: "commit-ops", name: "Cherry-pick", desc: "appliquer un commit sur une autre branche" },
-              { id: "commit-ops", name: "AI Review", desc: "relecture structurée d'un commit" },
+              { id: "commit-ops", name: t("helpPage.sections.commits.reword.name"), desc: t("helpPage.sections.commits.reword.desc") },
+              { id: "commit-ops", name: t("helpPage.sections.commits.split.name"), desc: t("helpPage.sections.commits.split.desc") },
+              { id: "commit-ops", name: t("helpPage.sections.commits.dropSquashMove.name"), desc: t("helpPage.sections.commits.dropSquashMove.desc") },
+              { id: "commit-ops", name: t("helpPage.sections.commits.cherryPick.name"), desc: t("helpPage.sections.commits.cherryPick.desc") },
+              { id: "commit-ops", name: t("helpPage.sections.commits.aiReview.name"), desc: t("helpPage.sections.commits.aiReview.desc") },
             ]}
           />
           <Section
-            title="La pile"
+            title={t("helpPage.sections.stack.title")}
             onTest={onTest}
             items={[
-              { id: "sync", name: "Sync", desc: "fetch + fast-forward + nettoyage PR + restack" },
-              { id: "sync", name: "Restack all", desc: "rebaser toute la pile" },
-              { id: "submit", name: "Submit", desc: "pousser et ouvrir/mettre à jour les PRs (description IA ✨)" },
-              { id: "sync", name: "Undo", desc: "annuler la dernière opération qui réécrit l'historique" },
+              { id: "sync", name: t("helpPage.sections.stack.sync.name"), desc: t("helpPage.sections.stack.sync.desc") },
+              { id: "sync", name: t("helpPage.sections.stack.restackAll.name"), desc: t("helpPage.sections.stack.restackAll.desc") },
+              { id: "submit", name: t("helpPage.sections.stack.submit.name"), desc: t("helpPage.sections.stack.submit.desc") },
+              { id: "sync", name: t("helpPage.sections.stack.undo.name"), desc: t("helpPage.sections.stack.undo.desc") },
             ]}
           />
           <Section
-            title="Stashes"
+            title={t("helpPage.sections.stashes.title")}
             onTest={onTest}
             items={[
-              { id: "stash", name: "Voir le contenu", desc: "la liste des fichiers de chaque stash" },
-              { id: "stash", name: "Apply / Pop / Drop", desc: "appliquer, appliquer+supprimer, supprimer" },
-              { id: "stash", name: "Stasher", desc: "mettre de côté les changements en cours" },
+              { id: "stash", name: t("helpPage.sections.stashes.viewContent.name"), desc: t("helpPage.sections.stashes.viewContent.desc") },
+              { id: "stash", name: t("helpPage.sections.stashes.applyPopDrop.name"), desc: t("helpPage.sections.stashes.applyPopDrop.desc") },
+              { id: "stash", name: t("helpPage.sections.stashes.stasher.name"), desc: t("helpPage.sections.stashes.stasher.desc") },
             ]}
           />
           <Section
-            title="Assistant IA (Claude)"
+            title={t("helpPage.sections.ai.title")}
             onTest={onTest}
             items={[
-              { id: "commit-ops", name: "Summary / Detailed", desc: "analyse d'un commit ou d'une PR" },
-              { id: "claude", name: "Demander à Claude", desc: "chat libre sur tout le dépôt" },
-              { id: "branch-ops", name: "Aide au merge", desc: "guide le merge avec approbation des commandes" },
-              { name: "Résoudre les conflits", desc: "proposition IA par fichier, ou tout d'un coup (au restack)" },
-              { name: "Digest", desc: "résumé « depuis ta dernière visite » à l'ouverture" },
+              { id: "commit-ops", name: t("helpPage.sections.ai.summaryDetailed.name"), desc: t("helpPage.sections.ai.summaryDetailed.desc") },
+              { id: "claude", name: t("helpPage.sections.ai.askClaude.name"), desc: t("helpPage.sections.ai.askClaude.desc") },
+              { id: "branch-ops", name: t("helpPage.sections.ai.mergeHelp.name"), desc: t("helpPage.sections.ai.mergeHelp.desc") },
+              { name: t("helpPage.sections.ai.resolveConflicts.name"), desc: t("helpPage.sections.ai.resolveConflicts.desc") },
+              { name: t("helpPage.sections.ai.digest.name"), desc: t("helpPage.sections.ai.digest.desc") },
             ]}
           />
           <Section
-            title="Pull requests"
+            title={t("helpPage.sections.pullRequests.title")}
             onTest={onTest}
             items={[
-              { id: "prs", name: "Review", desc: "Approuver / Demander des changements / Commenter" },
-              { id: "prs", name: "Checks CI", desc: "voir chaque check, ouvrir ses logs ; notif de fin" },
-              { id: "view-graph", name: "Pastilles", desc: "état PR, CI, review, avance/retard — d'un coup d'œil" },
+              { id: "prs", name: t("helpPage.sections.pullRequests.review.name"), desc: t("helpPage.sections.pullRequests.review.desc") },
+              { id: "prs", name: t("helpPage.sections.pullRequests.ciChecks.name"), desc: t("helpPage.sections.pullRequests.ciChecks.desc") },
+              { id: "view-graph", name: t("helpPage.sections.pullRequests.badges.name"), desc: t("helpPage.sections.pullRequests.badges.desc") },
             ]}
           />
           <Section
-            title="Productivité"
+            title={t("helpPage.sections.productivity.title")}
             onTest={onTest}
             items={[
-              { id: "palette", name: "Palette de commandes", desc: "Ctrl/⌘ + K : aller quelque part ou lancer une action" },
-              { id: "shortcuts", name: "Raccourcis clavier", desc: "? pour l'aide ; 1–6 vues ; s/r/n/p/u actions" },
-              { id: "commit-search", name: "Recherche de commits", desc: "filtrer le graphe par message / sha / auteur" },
+              { id: "palette", name: t("helpPage.sections.productivity.commandPalette.name"), desc: t("helpPage.sections.productivity.commandPalette.desc") },
+              { id: "shortcuts", name: t("helpPage.sections.productivity.shortcuts.name"), desc: t("helpPage.sections.productivity.shortcuts.desc") },
+              { id: "commit-search", name: t("helpPage.sections.productivity.commitSearch.name"), desc: t("helpPage.sections.productivity.commitSearch.desc") },
             ]}
           />
           <Section
-            title="Réglages"
+            title={t("helpPage.sections.settings.title")}
             onTest={onTest}
             items={[
-              { name: "Thème", desc: "Classique / Modern" },
-              { name: "Interface assistant", desc: "Chat (bulles) ou Terminal ; réponse progressive" },
-              { name: "Backend IA", desc: "Claude (cloud Anthropic) ou Ollama (modèles locaux gratuits)" },
-              { name: "Notifications", desc: "activité PRs/issues/CI + intervalle de sondage" },
+              { name: t("helpPage.sections.settings.theme.name"), desc: t("helpPage.sections.settings.theme.desc") },
+              { name: t("helpPage.sections.settings.assistantUi.name"), desc: t("helpPage.sections.settings.assistantUi.desc") },
+              { name: t("helpPage.sections.settings.aiBackend.name"), desc: t("helpPage.sections.settings.aiBackend.desc") },
+              { name: t("helpPage.sections.settings.notifications.name"), desc: t("helpPage.sections.settings.notifications.desc") },
             ]}
           />
         </div>

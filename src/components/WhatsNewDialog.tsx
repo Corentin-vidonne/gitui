@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { getVersion } from "@tauri-apps/api/app";
 import Markdown from "react-markdown";
 import { Sparkles, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 const LAST_SEEN_KEY = "gitui.lastSeenVersion";
 const REPO = "Corentin-vidonne/gitui";
@@ -12,6 +13,7 @@ const REPO = "Corentin-vidonne/gitui";
 // and a version with no published notes shows nothing. Fetch hits the public GitHub API
 // (allowed in the CSP connect-src); failures are non-fatal.
 export function WhatsNewDialog() {
+  const { t } = useTranslation();
   const [version, setVersion] = useState<string | null>(null);
   const [notes, setNotes] = useState<string | null>(null);
 
@@ -73,11 +75,11 @@ export function WhatsNewDialog() {
         <div className="flex items-center gap-2 border-b border-neutral-800 px-4 py-3">
           <Sparkles className="h-4 w-4 text-indigo-400" />
           <h2 className="text-sm font-semibold text-neutral-100">
-            Quoi de neuf — gitui {version}
+            {t("whatsNewDialog.title", { version })}
           </h2>
           <button
             onClick={close}
-            title="Fermer"
+            title={t("whatsNewDialog.close")}
             className="ml-auto rounded p-1 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100"
           >
             <X className="h-4 w-4" />
@@ -91,7 +93,7 @@ export function WhatsNewDialog() {
             onClick={close}
             className="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-500"
           >
-            Compris
+            {t("whatsNewDialog.gotIt")}
           </button>
         </div>
       </div>

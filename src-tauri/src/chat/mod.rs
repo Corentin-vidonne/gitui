@@ -36,21 +36,6 @@ struct ChatTurnEnd {
     stderr: String,
 }
 
-/// Appended to merge prompts in chat mode: nudges claude to ATTEMPT the write command
-/// (which is denied → surfaces in `permission_denials` → the frontend's approval modal)
-/// instead of only asking for confirmation in prose.
-const CHAT_MERGE_NOTE: &str = "\n\nNote : nous sommes dans une interface chat (pas un terminal). \
-Quand tu veux exécuter une commande qui écrit (merge, switch, commit), LANCE-LA directement : \
-elle sera bloquée et une demande d'autorisation s'affichera pour que je la valide avant exécution. \
-N'attends pas que je confirme en texte — propose, puis tente la commande.";
-
-/// Seed for the global "Ask Claude about this repo" chat (kept short so the first turn
-/// is fast — claude introduces itself and waits instead of exploring immediately).
-const REPO_CHAT_SEED: &str = "Tu es mon assistant pour ce dépôt git (un outil de \"stacked PRs\" \
-en Tauri + React + Rust). Je vais te poser des questions sur le code, l'historique, les branches \
-et les PRs. Présente-toi en UNE phrase courte, puis attends ma question — n'explore rien tant que \
-je n'ai pas demandé.";
-
 /// Spawn one headless `claude` turn in `repo` (optionally resuming `resume`), streaming
 /// each stdout line to the frontend as `chat-event`, then emitting `chat-turn-end`.
 fn spawn_turn(
@@ -172,7 +157,7 @@ pub fn chat_open_analyze(
 ) -> Result<()> {
     let root = git::repo_root(Path::new(&path))?;
     let repo = Path::new(&root);
-    let prompt = assist::analysis_prompt(repo, &sha, &mode)?;
+    let prompt = assist::analysis_prompt(repo, &sha, &mode, assist::ui_lang())?;
     spawn_turn(&app, &state, id, repo, None, &prompt, partial, &[])
 }
 
@@ -196,6 +181,7 @@ pub fn chat_open_analyze_pr(
         &detail.head_ref,
         &detail.base_ref,
         &mode,
+        assist::ui_lang(),
     );
     spawn_turn(&app, &state, id, repo, None, &prompt, partial, &[])
 }
@@ -212,7 +198,8 @@ pub fn chat_open_repo(
 ) -> Result<()> {
     let root = git::repo_root(Path::new(&path))?;
     let repo = Path::new(&root);
-    spawn_turn(&app, &state, id, repo, None, REPO_CHAT_SEED, partial, &extra_allowed)
+    let seed = assist::repo_chat_seed(assist::ui_lang());
+    spawn_turn(&app, &state, id, repo, None, &seed, partial, &extra_allowed)
 }
 
 /// Send a follow-up message, resuming the existing `claude` session.
@@ -253,14 +240,16 @@ pub fn chat_open_merge_pr(
     let detail = crate::github::pr_detail(repo, number)?;
     let raw = git::local_branches(repo)?;
     let trunk = git::trunk(repo, &raw);
+    let lang = assist::ui_lang();
     let base = assist::merge_assist_prompt(
         number,
         &detail.title,
         &detail.head_ref,
         &detail.base_ref,
         &trunk,
+        lang,
     );
-    let prompt = format!("{base}{CHAT_MERGE_NOTE}");
+    let prompt = format!("{base}{}", assist::chat_merge_note(lang));
     spawn_turn(&app, &state, id, repo, None, &prompt, partial, &extra_allowed)
 }
 
@@ -283,8 +272,9 @@ pub fn chat_open_merge_branches(
     let repo = Path::new(&root);
     let raw = git::local_branches(repo)?;
     let trunk = git::trunk(repo, &raw);
-    let base = assist::branch_merge_prompt(&source, &target, &trunk);
-    let prompt = format!("{base}{CHAT_MERGE_NOTE}");
+    let lang = assist::ui_lang();
+    let base = assist::branch_merge_prompt(&source, &target, &trunk, lang);
+    let prompt = format!("{base}{}", assist::chat_merge_note(lang));
     spawn_turn(&app, &state, id, repo, None, &prompt, partial, &extra_allowed)
 }
 

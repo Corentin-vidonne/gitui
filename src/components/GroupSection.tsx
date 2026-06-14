@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type DragEvent } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ChevronDown,
   ChevronRight,
@@ -32,6 +33,7 @@ function GroupMenu({
   onDelete: () => void;
   onSync: () => void;
 }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -49,7 +51,7 @@ function GroupMenu({
   return (
     <div ref={ref} className="relative flex">
       <button
-        title="Group actions"
+        title={t("groupSection.menu.actions")}
         onClick={(e) => {
           e.stopPropagation();
           setOpen((o) => !o);
@@ -73,7 +75,7 @@ function GroupMenu({
             }}
             className={`${item} text-neutral-200`}
           >
-            <Pencil className="h-3.5 w-3.5" /> Rename
+            <Pencil className="h-3.5 w-3.5" /> {t("groupSection.menu.rename")}
           </button>
           <button
             disabled={syncBusy}
@@ -84,7 +86,7 @@ function GroupMenu({
             className={`${item} text-neutral-200 disabled:opacity-50`}
           >
             <DownloadCloud className={`h-3.5 w-3.5 ${syncBusy ? "animate-spin" : ""}`} />
-            {syncBusy ? "Syncing…" : "Sync group"}
+            {syncBusy ? t("groupSection.menu.syncing") : t("groupSection.menu.syncGroup")}
           </button>
           <button
             onClick={() => {
@@ -93,7 +95,7 @@ function GroupMenu({
             }}
             className={`${item} text-rose-300 hover:bg-rose-950/40`}
           >
-            <Trash2 className="h-3.5 w-3.5" /> Delete group
+            <Trash2 className="h-3.5 w-3.5" /> {t("groupSection.menu.deleteGroup")}
           </button>
         </div>
       )}
@@ -153,6 +155,7 @@ export function GroupSection({
   onDragOverSection: () => void;
   onDragLeaveSection: () => void;
 }) {
+  const { t } = useTranslation();
   const group = section.group;
   const collapsed = group?.collapsed ?? false;
   const updateCount = section.repos.reduce(
@@ -207,11 +210,11 @@ export function GroupSection({
           <span className="w-3.5 shrink-0" />
         )}
         {group && <Folder className="h-3.5 w-3.5 shrink-0 text-neutral-500" />}
-        <span className="truncate">{group ? group.name : "Ungrouped"}</span>
+        <span className="truncate">{group ? group.name : t("groupSection.ungrouped")}</span>
         <span className="ml-auto flex items-center gap-1.5">
           {updateCount > 0 && (
             <span
-              title={`${updateCount} new update(s) in this group`}
+              title={t("groupSection.updatesInGroup", { count: updateCount })}
               className="rounded-full bg-indigo-600 px-1.5 text-[10px] font-semibold normal-case text-white"
             >
               {updateCount}
@@ -259,7 +262,7 @@ export function GroupSection({
             <span className="flex items-center gap-1">
               {updates[p]?.length ? (
                 <span
-                  title={`${updates[p].length} new update(s)`}
+                  title={t("groupSection.updatesCount", { count: updates[p].length })}
                   className="rounded-full bg-indigo-600 px-1.5 text-[10px] font-semibold text-white"
                 >
                   {updates[p].length}

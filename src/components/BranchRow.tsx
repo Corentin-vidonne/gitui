@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import {
   GitBranch,
   ArrowUp,
@@ -48,6 +49,7 @@ export function BranchRow({
   onSelect?: (branch: Branch) => void;
   isSelected?: boolean;
 }) {
+  const { t } = useTranslation();
   return (
     <div
       onClick={() => onSelect?.(branch)}
@@ -79,8 +81,8 @@ export function BranchRow({
         </span>
       )}
       {branch.dirty && (
-        <span title="uncommitted changes" className="text-[10px] text-rose-400">
-          ● uncommitted
+        <span title={t("branchRow.uncommitted.title")} className="text-[10px] text-rose-400">
+          ● {t("branchRow.uncommitted.label")}
         </span>
       )}
 
@@ -88,33 +90,33 @@ export function BranchRow({
         {onAction && (
           <div className="hidden items-center gap-0.5 group-hover:flex">
             {!branch.isCurrent && (
-              <IconBtn title="Checkout this branch" onClick={() => onAction("checkout", branch)}>
+              <IconBtn title={t("branchRow.actions.checkout")} onClick={() => onAction("checkout", branch)}>
                 <ArrowRightToLine className="h-3.5 w-3.5" />
               </IconBtn>
             )}
             {!branch.isTrunk && branch.needsPush && (
-              <IconBtn title="Publish (push to origin)" onClick={() => onAction("publish", branch)}>
+              <IconBtn title={t("branchRow.actions.publish")} onClick={() => onAction("publish", branch)}>
                 <UploadCloud className="h-3.5 w-3.5" />
               </IconBtn>
             )}
-            <IconBtn title="New branch on top" onClick={() => onAction("new-child", branch)}>
+            <IconBtn title={t("branchRow.actions.newChild")} onClick={() => onAction("new-child", branch)}>
               <Plus className="h-3.5 w-3.5" />
             </IconBtn>
             {!branch.isTrunk &&
               (branch.tracked ? (
                 <>
-                  <IconBtn title="Restack from here" onClick={() => onAction("restack", branch)}>
+                  <IconBtn title={t("branchRow.actions.restack")} onClick={() => onAction("restack", branch)}>
                     <Layers className="h-3.5 w-3.5" />
                   </IconBtn>
-                  <IconBtn title="Set parent" onClick={() => onAction("set-parent", branch)}>
+                  <IconBtn title={t("branchRow.actions.setParent")} onClick={() => onAction("set-parent", branch)}>
                     <GitFork className="h-3.5 w-3.5" />
                   </IconBtn>
-                  <IconBtn title="Untrack" onClick={() => onAction("untrack", branch)}>
+                  <IconBtn title={t("branchRow.actions.untrack")} onClick={() => onAction("untrack", branch)}>
                     <Unlink className="h-3.5 w-3.5" />
                   </IconBtn>
                 </>
               ) : (
-                <IconBtn title="Track in stack" onClick={() => onAction("track", branch)}>
+                <IconBtn title={t("branchRow.actions.track")} onClick={() => onAction("track", branch)}>
                   <Link className="h-3.5 w-3.5" />
                 </IconBtn>
               ))}
@@ -123,7 +125,7 @@ export function BranchRow({
 
         {branch.needsPush && (
           <span
-            title="local commits not pushed to origin"
+            title={t("branchRow.badges.push")}
             className="inline-flex items-center gap-0.5 rounded bg-sky-950/50 px-1.5 py-0.5 text-xs text-sky-300"
           >
             <UploadCloud className="h-3 w-3" />
@@ -132,7 +134,7 @@ export function BranchRow({
         )}
         {!branch.isTrunk && branch.behind > 0 && (
           <span
-            title="commits behind parent — needs restack"
+            title={t("branchRow.badges.behind")}
             className="inline-flex items-center gap-0.5 rounded bg-amber-950/50 px-1.5 py-0.5 text-xs text-amber-300"
           >
             <ArrowDown className="h-3 w-3" />
@@ -141,7 +143,7 @@ export function BranchRow({
         )}
         {!branch.isTrunk && branch.ahead > 0 && (
           <span
-            title="commits ahead of parent"
+            title={t("branchRow.badges.ahead")}
             className="inline-flex items-center gap-0.5 rounded bg-emerald-950/40 px-1.5 py-0.5 text-xs text-emerald-300"
           >
             <ArrowUp className="h-3 w-3" />

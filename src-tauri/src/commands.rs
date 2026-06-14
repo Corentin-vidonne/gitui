@@ -65,6 +65,13 @@ pub fn set_ai_backend(
     assist::set_ai_config(&backend, ollama_host, ollama_model, anthropic_model);
 }
 
+/// Sync the UI language ("fr"/"en"/"es"/"de") so the `claude` prompts are written in the
+/// user's language. Called by the frontend on startup and whenever the language changes.
+#[tauri::command]
+pub fn set_ui_language(lang: String) {
+    assist::set_ui_lang(&lang);
+}
+
 /// List Ollama models for the picker. Two sources, merged & de-duplicated:
 ///   1. `~/.ollama/config.json` → `integrations.claude.models` — what `ollama launch
 ///      claude` uses, **including cloud models** (`*:cloud`) that `/api/tags` never lists.
@@ -1208,7 +1215,7 @@ pub fn commit_detail(path: String, sha: String) -> Result<CommitDetail> {
 pub fn analyze_commit(path: String, sha: String, mode: String) -> Result<()> {
     let root = git::repo_root(Path::new(&path))?;
     let repo = Path::new(&root);
-    let prompt = assist::analysis_prompt(repo, &sha, &mode)?;
+    let prompt = assist::analysis_prompt(repo, &sha, &mode, assist::ui_lang())?;
     assist::launch_claude(repo, &prompt)
 }
 
@@ -1351,7 +1358,8 @@ pub async fn review_pr(path: String, number: u64) -> Result<PrReview> {
         let root = git::repo_root(Path::new(&path))?;
         let repo = Path::new(&root);
         let detail = github::pr_detail(repo, number)?;
-        let out = assist::run_claude_headless(repo, &assist::pr_review_prompt(&detail))?;
+        let out =
+            assist::run_claude_headless(repo, &assist::pr_review_prompt(&detail, assist::ui_lang()))?;
         let json = assist::extract_json(&out)?;
         serde_json::from_str::<PrReview>(json)
             .map_err(|e| AppError::new(format!("bad review JSON: {e}")))
@@ -1367,8 +1375,10 @@ pub async fn generate_commit_message(path: String, sha: String, mode: String) ->
     tauri::async_runtime::spawn_blocking(move || -> Result<String> {
         let root = git::repo_root(Path::new(&path))?;
         let repo = Path::new(&root);
-        let out =
-            assist::run_claude_headless(repo, &assist::commit_message_prompt(&sha, &mode))?;
+        let out = assist::run_claude_headless(
+            repo,
+            &assist::commit_message_prompt(&sha, &mode, assist::ui_lang()),
+        )?;
         let json = assist::extract_json(&out)?;
         #[derive(serde::Deserialize)]
         struct Msg {
@@ -1392,7 +1402,7 @@ pub async fn review_commit(path: String, sha: String) -> Result<PrReview> {
         let detail = git::commit_detail(repo, &sha)?;
         // Cap the diff (char-boundary safe) to keep the prompt bounded.
         let diff: String = detail.diff.chars().take(60_000).collect();
-        let prompt = assist::commit_review_prompt(&sha, &detail.message, &diff);
+        let prompt = assist::commit_review_prompt(&sha, &detail.message, &diff, assist::ui_lang());
         let out = assist::run_claude_headless(repo, &prompt)?;
         let json = assist::extract_json(&out)?;
         serde_json::from_str::<PrReview>(json)
@@ -1445,8 +1455,13 @@ pub async fn generate_pr_description(path: String, branch: String) -> Result<PrD
         let range = format!("{base}..{branch}");
         let commits = git::git(repo, &["log", "--format=- %s", &range]).unwrap_or_default();
         let stat = git::git(repo, &["diff", "--stat", &range]).unwrap_or_default();
-        let prompt =
-            assist::pr_description_prompt(&branch, &base, commits.trim(), stat.trim());
+        let prompt = assist::pr_description_prompt(
+            &branch,
+            &base,
+            commits.trim(),
+            stat.trim(),
+            assist::ui_lang(),
+        );
         let out = assist::run_claude_headless(repo, &prompt)?;
         let json = assist::extract_json(&out)?;
         #[derive(serde::Deserialize)]
@@ -1495,6 +1510,7 @@ pub async fn suggest_conflict_resolution(
             base.as_deref(),
             ours.as_deref(),
             theirs.as_deref(),
+            assist::ui_lang(),
         );
         let out = assist::run_claude_headless(repo, &prompt)?;
         let json = assist::extract_json(&out)?;
@@ -1606,14 +1622,7 @@ pub async fn summarize_updates(
                 format!("- [{}] {} — {}", label, i.title, i.detail)
             })
             .collect();
-        let prompt = format!(
-            "Voici les nouveautés d'un dépôt git depuis la dernière visite de l'utilisateur :\n{}\n\n\
-             Rédige un DIGEST en français, 2 à 4 lignes MAXIMUM, factuel et utile. Regroupe par thème \
-             si pertinent (PRs, issues, tronc) et mets en avant ce qui demande une action (CI en échec, \
-             review demandée, PR mergée). Réponds DIRECTEMENT par le digest — pas d'introduction, pas de \
-             titres Markdown, pas de bloc de code — et N'EXPLORE PAS le dépôt.",
-            lines.join("\n")
-        );
+        let prompt = assist::update_digest_prompt(&lines.join("\n"), assist::ui_lang());
         let out = assist::run_claude_headless(repo, &prompt)?;
         Ok(out.trim().to_string())
     })

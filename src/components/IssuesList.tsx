@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { CircleDot, CircleCheck, MessageSquare } from "lucide-react";
 import type { IssueSummary } from "../lib/types";
 import { api, errorText } from "../lib/api";
@@ -15,6 +16,7 @@ export function IssuesList({
   selected: number | null;
   onSelect: (number: number) => void;
 }) {
+  const { t } = useTranslation();
   const [state, setState] = useState<IssueState>("open");
   const [issues, setIssues] = useState<IssueSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -45,7 +47,7 @@ export function IssuesList({
                 : "text-neutral-400 hover:bg-neutral-900"
             }`}
           >
-            {s}
+            {t(`issuesList.states.${s}`)}
           </button>
         ))}
       </div>
@@ -56,9 +58,13 @@ export function IssuesList({
             {error}
           </div>
         )}
-        {!issues && !error && <p className="text-sm text-neutral-500">Loading…</p>}
+        {!issues && !error && <p className="text-sm text-neutral-500">{t("common.loading")}</p>}
         {issues && issues.length === 0 && (
-          <p className="text-sm text-neutral-600">No {state === "all" ? "" : state} issues.</p>
+          <p className="text-sm text-neutral-600">
+            {state === "all"
+              ? t("issuesList.emptyAll")
+              : t("issuesList.empty", { state: t(`issuesList.states.${state}`) })}
+          </p>
         )}
 
         <div className="mx-auto max-w-3xl space-y-1">

@@ -7,6 +7,7 @@ import {
 } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { useTranslation } from "react-i18next";
 import Markdown from "react-markdown";
 import {
   Sparkles,
@@ -149,6 +150,7 @@ export function ChatDock({
   aiName: string;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const [items, setItems] = useState<ChatItem[]>([]);
   const [running, setRunning] = useState(true);
   const [input, setInput] = useState("");
@@ -409,7 +411,7 @@ export function ChatDock({
     if (!approval) return;
     const { command, patterns, compound } = approval;
     setApproval(null);
-    setItems((it) => [...it, { kind: "note", text: `✓ Autorisé : ${command}` }]);
+    setItems((it) => [...it, { kind: "note", text: t("chatDock.note.authorized", { command }) }]);
     if (compound) {
       // Don't whitelist several sub-commands from one click. Ask the model to run them one
       // at a time; each individual write then prompts for its own approval.
@@ -428,7 +430,7 @@ export function ChatDock({
     if (!approval) return;
     const { command } = approval;
     setApproval(null);
-    setItems((it) => [...it, { kind: "note", text: `✗ Refusé : ${command}` }]);
+    setItems((it) => [...it, { kind: "note", text: t("chatDock.note.refused", { command }) }]);
     sendTurn("Je refuse cette commande. Ne l'exécute pas ; propose une alternative ou arrête-toi.");
   }
 
@@ -464,7 +466,7 @@ export function ChatDock({
       ? `PR #${target.number} · ${mode}`
       : target.kind === "merge-branches"
       ? `merge ${target.source} → ${target.target}`
-      : "dépôt";
+      : t("chatDock.label.repo");
 
   const canSend = !running && !!sessionRef.current && !!input.trim();
 
@@ -499,7 +501,7 @@ export function ChatDock({
       <div ref={scrollRef} className="min-h-0 flex-1 space-y-3 overflow-auto px-3 py-2">
         {items.length === 0 && running && (
           <div className="flex items-center gap-2 text-xs text-neutral-500">
-            <Loader2 className="h-3.5 w-3.5 animate-spin" /> {aiName} analyse…
+            <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("chatDock.analyzing", { name: aiName })}
           </div>
         )}
         {items.map((it, i) => {
@@ -542,7 +544,7 @@ export function ChatDock({
         })}
         {items.length > 0 && running && (
           <div className="flex items-center gap-2 text-xs text-neutral-500">
-            <Loader2 className="h-3.5 w-3.5 animate-spin" /> {aiName} réfléchit…
+            <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("chatDock.thinking", { name: aiName })}
           </div>
         )}
       </div>
@@ -554,7 +556,9 @@ export function ChatDock({
           onKeyDown={onKeyDown}
           rows={1}
           placeholder={
-            sessionRef.current ? `Pose une question à ${aiName}…` : "Démarrage de la session…"
+            sessionRef.current
+              ? t("chatDock.placeholder.ask", { name: aiName })
+              : t("chatDock.placeholder.starting")
           }
           disabled={running && !sessionRef.current}
           className="max-h-32 min-h-[2.25rem] flex-1 resize-none rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 outline-none focus:border-indigo-600 disabled:opacity-50"
@@ -562,7 +566,7 @@ export function ChatDock({
         <button
           onClick={send}
           disabled={!canSend}
-          title="Envoyer (Entrée)"
+          title={t("chatDock.send")}
           className="inline-flex h-9 items-center gap-1.5 rounded-md bg-indigo-600 px-3 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-40"
         >
           <Send className="h-4 w-4" />
@@ -570,11 +574,11 @@ export function ChatDock({
       </div>
 
       {approval && (
-        <Modal title="Autorisation requise" onClose={refuse}>
+        <Modal title={t("chatDock.approval.title")} onClose={refuse}>
           <div className="space-y-3">
             <div className="flex items-start gap-2 text-sm text-neutral-300">
               <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
-              <span>{aiName} veut exécuter cette commande :</span>
+              <span>{t("chatDock.approval.prompt", { name: aiName })}</span>
             </div>
             <pre className="overflow-auto rounded border border-neutral-700 bg-neutral-950 p-2 font-mono text-xs text-amber-300">
               {approval.command}
@@ -582,11 +586,7 @@ export function ChatDock({
             {approval.compound && (
               <div className="flex items-start gap-2 rounded border border-amber-900 bg-amber-950/40 px-2 py-1.5 text-[11px] text-amber-300">
                 <ShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                <span>
-                  Commande composée (enchaînement détecté). Si tu autorises, {aiName} sera
-                  invité à exécuter les commandes une par une — chacune devra être autorisée
-                  séparément.
-                </span>
+                <span>{t("chatDock.approval.compoundWarning", { name: aiName })}</span>
               </div>
             )}
             <div className="flex justify-end gap-2 pt-1">
@@ -594,13 +594,13 @@ export function ChatDock({
                 onClick={refuse}
                 className="rounded-md px-3 py-1.5 text-sm text-neutral-400 hover:bg-neutral-800"
               >
-                Refuser
+                {t("chatDock.approval.refuse")}
               </button>
               <button
                 onClick={approve}
                 className="rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-500"
               >
-                Autoriser
+                {t("chatDock.approval.authorize")}
               </button>
             </div>
           </div>

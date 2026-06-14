@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Sparkles, Loader2 } from "lucide-react";
 import { Modal } from "./Modal";
 import { api, errorText } from "../lib/api";
@@ -13,6 +14,7 @@ export function SubmitDialog({
   onDone: (view: RepoView, summary: string) => void;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const [steps, setSteps] = useState<SubmitStepInfo[] | null>(null);
   const [titles, setTitles] = useState<Record<string, string>>({});
   const [draft, setDraft] = useState(false);
@@ -64,9 +66,9 @@ export function SubmitDialog({
     try {
       const view = await api.submit(repoPath, null, draft, titles, bodies);
       const parts = [];
-      if (creates) parts.push(`${creates} PR created`);
-      if (updates) parts.push(`${updates} updated`);
-      onDone(view, parts.join(", ") || "submitted");
+      if (creates) parts.push(t("submitDialog.summary.created", { count: creates }));
+      if (updates) parts.push(t("submitDialog.summary.updated", { count: updates }));
+      onDone(view, parts.join(", ") || t("submitDialog.summary.submitted"));
     } catch (e) {
       setError(errorText(e));
       setSubmitting(false);
@@ -81,9 +83,9 @@ export function SubmitDialog({
       : "bg-neutral-800 text-neutral-400";
 
   return (
-    <Modal title="Submit stack" onClose={onClose}>
+    <Modal title={t("submitDialog.title")} onClose={onClose}>
       {steps === null && !error && (
-        <p className="text-sm text-neutral-500">Loading plan…</p>
+        <p className="text-sm text-neutral-500">{t("submitDialog.loadingPlan")}</p>
       )}
       {error && (
         <div className="mb-3 rounded-md border border-red-900 bg-red-950/40 px-3 py-2 text-sm text-red-300">
@@ -91,7 +93,7 @@ export function SubmitDialog({
         </div>
       )}
       {steps && steps.length === 0 && (
-        <p className="text-sm text-neutral-500">Nothing to submit — no tracked branches.</p>
+        <p className="text-sm text-neutral-500">{t("submitDialog.nothingToSubmit")}</p>
       )}
       {steps && steps.length > 0 && (
         <div className="space-y-3">
@@ -103,10 +105,10 @@ export function SubmitDialog({
                   <span className="text-neutral-500">→ {s.base}</span>
                   <span className={`ml-auto rounded px-1.5 py-0.5 text-[10px] ${badge(s.action)}`}>
                     {s.action === "create"
-                      ? "new PR"
+                      ? t("submitDialog.badge.newPr")
                       : s.action === "update"
-                      ? "update base"
-                      : "up to date"}
+                      ? t("submitDialog.badge.updateBase")
+                      : t("submitDialog.badge.upToDate")}
                   </span>
                 </div>
                 {s.action === "create" && (
@@ -117,14 +119,14 @@ export function SubmitDialog({
                         onChange={(e) =>
                           setTitles((t) => ({ ...t, [s.branch]: e.target.value }))
                         }
-                        placeholder="PR title"
+                        placeholder={t("submitDialog.prTitlePlaceholder")}
                         className="min-w-0 flex-1 rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-xs text-neutral-100 outline-none focus:border-indigo-600"
                       />
                       <button
                         type="button"
                         onClick={() => generate(s.branch)}
                         disabled={generating === s.branch}
-                        title="Générer titre + description (IA, depuis les commits de la branche)"
+                        title={t("submitDialog.describeTitle")}
                         className="inline-flex shrink-0 items-center gap-1 rounded border border-indigo-700 px-2 text-[11px] text-indigo-300 hover:bg-indigo-950/40 disabled:opacity-50"
                       >
                         {generating === s.branch ? (
@@ -132,7 +134,7 @@ export function SubmitDialog({
                         ) : (
                           <Sparkles className="h-3 w-3" />
                         )}
-                        Décrire
+                        {t("submitDialog.describe")}
                       </button>
                     </div>
                     <textarea
@@ -141,7 +143,7 @@ export function SubmitDialog({
                         setBodies((b) => ({ ...b, [s.branch]: e.target.value }))
                       }
                       rows={3}
-                      placeholder="Description de la PR (Markdown, optionnel)"
+                      placeholder={t("submitDialog.prBodyPlaceholder")}
                       className="w-full resize-y rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-xs text-neutral-300 outline-none focus:border-indigo-600"
                     />
                   </div>
@@ -162,7 +164,7 @@ export function SubmitDialog({
               checked={draft}
               onChange={(e) => setDraft(e.target.checked)}
             />
-            Create new PRs as draft
+            {t("submitDialog.createAsDraft")}
           </label>
 
           <div className="flex justify-end gap-2 pt-1">
@@ -171,14 +173,14 @@ export function SubmitDialog({
               onClick={onClose}
               className="rounded-md px-3 py-1.5 text-sm text-neutral-400 hover:bg-neutral-800"
             >
-              Cancel
+              {t("common.cancel")}
             </button>
             <button
               onClick={confirm}
               disabled={submitting || (creates === 0 && updates === 0)}
               className="rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
             >
-              {submitting ? "Submitting…" : "Submit"}
+              {submitting ? t("submitDialog.submitting") : "Submit"}
             </button>
           </div>
         </div>

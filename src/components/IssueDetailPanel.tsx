@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { X, ExternalLink, CircleDot, CircleCheck } from "lucide-react";
 import { safeOpen } from "../lib/safeOpen";
 import type { IssueDetail } from "../lib/types";
@@ -14,6 +15,7 @@ export function IssueDetailPanel({
   number: number;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const [issue, setIssue] = useState<IssueDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,14 +62,18 @@ export function IssueDetailPanel({
             {error}
           </div>
         )}
-        {!issue && !error && <p className="text-sm text-neutral-500">Loading…</p>}
+        {!issue && !error && (
+          <p className="text-sm text-neutral-500">{t("common.loading")}</p>
+        )}
 
         {issue && (
           <>
             <h3 className="text-sm font-semibold text-neutral-100">{issue.title}</h3>
 
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs text-neutral-400">by {issue.author}</span>
+              <span className="text-xs text-neutral-400">
+                {t("issueDetailPanel.by", { author: issue.author })}
+              </span>
               {issue.labels.map((l) => (
                 <span
                   key={l}
@@ -80,7 +86,7 @@ export function IssueDetailPanel({
                 onClick={() => safeOpen(issue.url)}
                 className="ml-auto inline-flex items-center gap-1.5 rounded-md border border-neutral-700 px-2.5 py-1 text-xs text-neutral-300 hover:bg-neutral-800"
               >
-                <ExternalLink className="h-3.5 w-3.5" /> Open
+                <ExternalLink className="h-3.5 w-3.5" /> {t("common.open")}
               </button>
             </div>
 

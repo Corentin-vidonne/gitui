@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Boxes, Check } from "lucide-react";
 import { UNGROUPED, type RepoGroup } from "../lib/groups";
 
@@ -16,6 +17,7 @@ export function WorkspaceGroupFilter({
   value: string | null;
   onChange: (next: string | null) => void;
 }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -29,10 +31,10 @@ export function WorkspaceGroupFilter({
 
   const label =
     value === null
-      ? "All groups"
+      ? t("workspaceGroupFilter.allGroups")
       : value === UNGROUPED
-      ? "Ungrouped"
-      : groups.find((g) => g.id === value)?.name ?? "All groups";
+      ? t("workspaceGroupFilter.ungrouped")
+      : groups.find((g) => g.id === value)?.name ?? t("workspaceGroupFilter.allGroups");
 
   const item =
     "flex w-full items-center gap-2 rounded px-2 py-1 text-left text-xs hover:bg-neutral-800";
@@ -66,7 +68,7 @@ export function WorkspaceGroupFilter({
             className={item}
           >
             {mark(value === null)}
-            <span className="text-neutral-200">All groups</span>
+            <span className="text-neutral-200">{t("workspaceGroupFilter.allGroups")}</span>
           </button>
           {groups.map((g) => (
             <button
@@ -89,7 +91,7 @@ export function WorkspaceGroupFilter({
             className={item}
           >
             {mark(value === UNGROUPED)}
-            <span className="text-neutral-300">Ungrouped</span>
+            <span className="text-neutral-300">{t("workspaceGroupFilter.ungrouped")}</span>
           </button>
         </div>
       )}

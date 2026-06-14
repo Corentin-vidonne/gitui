@@ -7,6 +7,7 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
 import { GitPullRequest, CircleDot, Search } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { api } from "../lib/api";
 
 export type PaletteItem = {
@@ -47,6 +48,7 @@ export function CommandPalette({
   onOpenIssue: (n: number) => void;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
   const [dynamic, setDynamic] = useState<PaletteItem[]>([]);
@@ -64,7 +66,7 @@ export function CommandPalette({
       setDynamic([
         ...prs.map((p) => ({
           id: `pr-${p.number}`,
-          group: "Pull requests",
+          group: t("commandPalette.groups.pullRequests"),
           label: `#${p.number} ${p.title}`,
           hint: p.state,
           icon: <GitPullRequest className="h-4 w-4 text-indigo-400" />,
@@ -72,7 +74,7 @@ export function CommandPalette({
         })),
         ...issues.map((i) => ({
           id: `issue-${i.number}`,
-          group: "Issues",
+          group: t("commandPalette.groups.issues"),
           label: `#${i.number} ${i.title}`,
           hint: i.state,
           icon: <CircleDot className="h-4 w-4 text-emerald-400" />,
@@ -135,7 +137,7 @@ export function CommandPalette({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={onKeyDown}
-            placeholder="Aller à une branche, PR, issue… ou lancer une action"
+            placeholder={t("commandPalette.searchPlaceholder")}
             className="flex-1 bg-transparent py-3 text-sm text-neutral-100 outline-none placeholder:text-neutral-600"
           />
           <kbd className="rounded border border-neutral-700 px-1.5 py-0.5 text-[10px] text-neutral-500">
@@ -144,7 +146,7 @@ export function CommandPalette({
         </div>
         <ul ref={listRef} className="max-h-[50vh] overflow-auto py-1">
           {filtered.length === 0 && (
-            <li className="px-4 py-6 text-center text-sm text-neutral-500">Aucun résultat</li>
+            <li className="px-4 py-6 text-center text-sm text-neutral-500">{t("commandPalette.noResults")}</li>
           )}
           {filtered.map((it, i) => {
             const header = it.group !== lastGroup ? it.group : null;

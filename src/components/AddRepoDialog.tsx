@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { FolderOpen, DownloadCloud } from "lucide-react";
 import { Modal } from "./Modal";
 import { api, errorText, pickRepoFolder } from "../lib/api";
@@ -21,6 +22,7 @@ export function AddRepoDialog({
   onDone: (view: RepoView) => void;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const [tab, setTab] = useState<"open" | "clone">("open");
   const [url, setUrl] = useState("");
   const [dest, setDest] = useState<string | null>(null);
@@ -28,7 +30,7 @@ export function AddRepoDialog({
   const [error, setError] = useState<string | null>(null);
 
   async function openExisting() {
-    const dir = await pickRepoFolder("Select an existing git repository");
+    const dir = await pickRepoFolder(t("addRepoDialog.pickOpenTitle"));
     if (!dir) return;
     setBusy(true);
     setError(null);
@@ -41,7 +43,7 @@ export function AddRepoDialog({
   }
 
   async function chooseDest() {
-    const dir = await pickRepoFolder("Choose where to clone the repository");
+    const dir = await pickRepoFolder(t("addRepoDialog.pickCloneDestTitle"));
     if (dir) setDest(dir);
   }
 
@@ -74,10 +76,10 @@ export function AddRepoDialog({
   );
 
   return (
-    <Modal title="Add repository" onClose={onClose}>
+    <Modal title={t("addRepoDialog.title")} onClose={onClose}>
       <div className="mb-3 flex gap-1 rounded-md border border-neutral-800 p-0.5">
-        {tabBtn("open", "Open existing", <FolderOpen className="h-4 w-4" />)}
-        {tabBtn("clone", "Clone from URL", <DownloadCloud className="h-4 w-4" />)}
+        {tabBtn("open", t("addRepoDialog.tabs.open"), <FolderOpen className="h-4 w-4" />)}
+        {tabBtn("clone", t("addRepoDialog.tabs.clone"), <DownloadCloud className="h-4 w-4" />)}
       </div>
 
       {error && (
@@ -89,7 +91,7 @@ export function AddRepoDialog({
       {tab === "open" ? (
         <div className="space-y-3">
           <p className="text-xs text-neutral-400">
-            Pick a repository already cloned on your machine.
+            {t("addRepoDialog.openHint")}
           </p>
           <button
             onClick={openExisting}
@@ -97,13 +99,13 @@ export function AddRepoDialog({
             className="flex w-full items-center justify-center gap-2 rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
           >
             <FolderOpen className="h-4 w-4" />
-            {busy ? "Opening…" : "Choose folder…"}
+            {busy ? t("addRepoDialog.opening") : t("addRepoDialog.chooseFolder")}
           </button>
         </div>
       ) : (
         <div className="space-y-3">
           <div>
-            <label className="mb-1 block text-xs text-neutral-400">Repository URL</label>
+            <label className="mb-1 block text-xs text-neutral-400">{t("addRepoDialog.urlLabel")}</label>
             <input
               autoFocus
               value={url}
@@ -113,13 +115,13 @@ export function AddRepoDialog({
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs text-neutral-400">Clone into</label>
+            <label className="mb-1 block text-xs text-neutral-400">{t("addRepoDialog.cloneIntoLabel")}</label>
             <button
               onClick={chooseDest}
               className="flex w-full items-center gap-2 rounded-md border border-neutral-700 px-3 py-1.5 text-left text-sm text-neutral-200 hover:bg-neutral-800"
             >
               <FolderOpen className="h-4 w-4 shrink-0 text-neutral-400" />
-              <span className="truncate">{dest ?? "Choose destination folder…"}</span>
+              <span className="truncate">{dest ?? t("addRepoDialog.chooseDestination")}</span>
             </button>
             {dest && name && (
               <p className="mt-1 truncate text-xs text-neutral-500">
@@ -133,7 +135,7 @@ export function AddRepoDialog({
               onClick={onClose}
               className="rounded-md px-3 py-1.5 text-sm text-neutral-400 hover:bg-neutral-800"
             >
-              Cancel
+              {t("common.cancel")}
             </button>
             <button
               onClick={doClone}
@@ -141,7 +143,7 @@ export function AddRepoDialog({
               className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
             >
               <DownloadCloud className="h-4 w-4" />
-              {busy ? "Cloning…" : "Clone"}
+              {busy ? t("addRepoDialog.cloning") : t("addRepoDialog.clone")}
             </button>
           </div>
         </div>

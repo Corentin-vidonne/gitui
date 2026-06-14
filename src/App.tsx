@@ -32,6 +32,7 @@ import {
   AlertTriangle,
   TerminalSquare,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { api, errorText } from "./lib/api";
 import { notify as sendDesktopNotification } from "./lib/notify";
 import type {
@@ -138,18 +139,20 @@ type DialogState =
 type ViewMode = "graph" | "commits" | "tree" | "prs" | "issues" | "docs";
 
 // The full overview tour (targets always-present toolbar elements).
-const MAIN_TOUR: GuideStep[] = [
-  { title: "Bienvenue 👋", body: "Petit tour des fonctions principales. Tu peux fermer à tout moment (Échap)." },
-  { selector: '[data-tour="views"]', title: "Changer de vue", body: "Graphe des branches, commits, arborescence, PRs, issues, docs. (Raccourcis 1–6.)" },
-  { selector: '[data-tour="stack-actions"]', title: "Actions de pile", body: "Sync met à jour, Restack rebase la pile, Undo annule la dernière opération. (s / r / u)" },
-  { selector: '[data-tour="new-branch"]', title: "Créer une branche", body: "Au sommet de la pile, avec un nom suggéré par l'IA. (n)" },
-  { selector: '[data-tour="submit"]', title: "Publier", body: "Pousse et ouvre/met à jour les PRs ; description rédigée par l'IA. (p)" },
-  { selector: '[data-tour="claude"]', title: "Assistant IA", body: "Discute du dépôt, génère des messages, relis du code, merge guidé." },
-  { selector: '[data-tour="stash"]', title: "Stashes", body: "Vois ce que contient chaque stash, applique-le ou supprime-le." },
-  { title: "À toi de jouer 🚀", body: "Ctrl/⌘ + K pour la palette, ? pour les raccourcis. La page d'aide récapitule tout." },
+type TFn = ReturnType<typeof useTranslation>["t"];
+const MAIN_TOUR = (t: TFn): GuideStep[] => [
+  { title: t("app.tour.welcomeTitle"), body: t("app.tour.welcomeBody") },
+  { selector: '[data-tour="views"]', title: t("app.tour.viewsTitle"), body: t("app.tour.viewsBody") },
+  { selector: '[data-tour="stack-actions"]', title: t("app.tour.stackActionsTitle"), body: t("app.tour.stackActionsBody") },
+  { selector: '[data-tour="new-branch"]', title: t("app.tour.newBranchTitle"), body: t("app.tour.newBranchBody") },
+  { selector: '[data-tour="submit"]', title: t("app.tour.submitTitle"), body: t("app.tour.submitBody") },
+  { selector: '[data-tour="claude"]', title: t("app.tour.claudeTitle"), body: t("app.tour.claudeBody") },
+  { selector: '[data-tour="stash"]', title: t("app.tour.stashTitle"), body: t("app.tour.stashBody") },
+  { title: t("app.tour.doneTitle"), body: t("app.tour.doneBody") },
 ];
 
 export default function App() {
+  const { t } = useTranslation();
   const [repos, setRepos] = useState<string[]>(loadRepos);
   const [selected, setSelected] = useState<string | null>(repos[0] ?? null);
   const [view, setView] = useState<RepoView | null>(null);
@@ -417,7 +420,7 @@ export default function App() {
       if (fresh.length <= 3) {
         for (const it of fresh) await sendDesktopNotification(name, it.detail);
       } else {
-        await sendDesktopNotification(name, `${fresh.length} new updates`);
+        await sendDesktopNotification(name, t("app.notify.newUpdates", { count: fresh.length }));
       }
     }
   }, [repos, settings.notifications]);
@@ -455,13 +458,13 @@ export default function App() {
         return;
       }
       if (e.ctrlKey || e.metaKey || e.altKey) return;
-      const t = e.target as HTMLElement | null;
+      const el = e.target as HTMLElement | null;
       if (
-        t &&
-        (t.tagName === "INPUT" ||
-          t.tagName === "TEXTAREA" ||
-          t.tagName === "SELECT" ||
-          t.isContentEditable)
+        el &&
+        (el.tagName === "INPUT" ||
+          el.tagName === "TEXTAREA" ||
+          el.tagName === "SELECT" ||
+          el.isContentEditable)
       )
         return;
       if (showPalette || showShortcuts) return;
@@ -490,7 +493,7 @@ export default function App() {
         case "6": setViewMode("docs"); break;
         case "s":
           if (!view.conflict)
-            runMutation(api.sync(selected)).then((ok) => ok && notify("Synced ✓"));
+            runMutation(api.sync(selected)).then((ok) => ok && notify(t("app.toast.synced")));
           break;
         case "r":
           if (!view.conflict) runMutation(api.restack(selected, null));
@@ -518,7 +521,7 @@ export default function App() {
   useEffect(() => {
     if (view && !hasSeenTour() && !showDeps && !showWelcome) {
       markTourSeen();
-      setGuideSteps(MAIN_TOUR);
+      setGuideSteps(MAIN_TOUR(t));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view]);
@@ -531,7 +534,7 @@ export default function App() {
     if (startTour) {
       if (view && !hasSeenTour()) {
         markTourSeen();
-        setGuideSteps(MAIN_TOUR);
+        setGuideSteps(MAIN_TOUR(t));
       }
     } else {
       markTourSeen(); // skipped onboarding → don't pop the tour later either
@@ -573,7 +576,11 @@ export default function App() {
         const { [groupId]: _drop, ...rest } = b;
         return rest;
       });
-      notify(fail === 0 ? `Synced ${ok} repo(s) ✓` : `Synced ${ok}, ${fail} failed`);
+      notify(
+        fail === 0
+          ? t("app.toast.syncedRepos", { ok })
+          : t("app.toast.syncedReposPartial", { ok, fail })
+      );
       checkAllUpdates();
     },
     [sections, selected, checkAllUpdates]
@@ -603,9 +610,9 @@ export default function App() {
     for (const b of flattenBranches(view)) {
       paletteItems.push({
         id: `b-${b.name}`,
-        group: "Branches",
+        group: t("app.palette.groupBranches"),
         label: b.name,
-        hint: b.isCurrent ? "courante" : b.isTrunk ? "tronc" : undefined,
+        hint: b.isCurrent ? t("app.palette.current") : b.isTrunk ? t("app.palette.trunk") : undefined,
         icon: <GitBranch className="h-4 w-4 text-indigo-400" />,
         run: () => {
           setInspectPr(null);
@@ -618,8 +625,8 @@ export default function App() {
     if (undoLabel) {
       paletteItems.push({
         id: "a-undo",
-        group: "Actions",
-        label: `Undo : ${undoLabel}`,
+        group: t("app.palette.groupActions"),
+        label: t("app.palette.undoAction", { label: undoLabel }),
         icon: <Undo2 className="h-4 w-4" />,
         run: () => {
           runMutation(api.undo(repo));
@@ -629,17 +636,17 @@ export default function App() {
     paletteItems.push(
       {
         id: "a-sync",
-        group: "Actions",
+        group: t("app.palette.groupActions"),
         label: "Sync",
         icon: <DownloadCloud className="h-4 w-4" />,
         run: () => {
-          runMutation(api.sync(repo)).then((ok) => ok && notify("Synced ✓"));
+          runMutation(api.sync(repo)).then((ok) => ok && notify(t("app.toast.synced")));
         },
       },
       {
         id: "a-restack",
-        group: "Actions",
-        label: "Restack all",
+        group: t("app.palette.groupActions"),
+        label: t("app.palette.restackAll"),
         icon: <Layers className="h-4 w-4" />,
         run: () => {
           runMutation(api.restack(repo, null));
@@ -647,73 +654,73 @@ export default function App() {
       },
       {
         id: "a-submit",
-        group: "Actions",
+        group: t("app.palette.groupActions"),
         label: "Submit",
         icon: <GitPullRequest className="h-4 w-4" />,
         run: () => setShowSubmit(true),
       },
       {
         id: "a-new",
-        group: "Actions",
-        label: "New branch",
+        group: t("app.palette.groupActions"),
+        label: t("app.palette.newBranch"),
         icon: <Plus className="h-4 w-4" />,
         run: () => setDialog({ type: "new", parent: view.currentBranch ?? view.trunk }),
       },
       {
         id: "a-stash",
-        group: "Actions",
-        label: "Stashes",
+        group: t("app.palette.groupActions"),
+        label: t("app.palette.stashes"),
         icon: <Archive className="h-4 w-4" />,
         run: () => setShowStash(true),
       },
       {
         id: "a-cmdlog",
-        group: "Actions",
-        label: "Journal des commandes",
+        group: t("app.palette.groupActions"),
+        label: t("app.palette.commandLog"),
         icon: <TerminalSquare className="h-4 w-4" />,
         run: () => setShowCmdLog(true),
       },
       {
         id: "a-claude",
-        group: "Actions",
-        label: `Demander à ${aiName}`,
+        group: t("app.palette.groupActions"),
+        label: t("app.palette.askAi", { name: aiName }),
         icon: <Sparkles className="h-4 w-4" />,
         run: () => setTerminal({ repoPath: repo, target: { kind: "repo" }, mode: "" }),
       },
       {
         id: "a-settings",
-        group: "Actions",
-        label: "Settings",
+        group: t("app.palette.groupActions"),
+        label: t("app.palette.settings"),
         icon: <SettingsIcon className="h-4 w-4" />,
         run: () => setShowSettings(true),
       },
       {
         id: "a-shortcuts",
-        group: "Actions",
-        label: "Raccourcis clavier",
+        group: t("app.palette.groupActions"),
+        label: t("app.palette.shortcuts"),
         icon: <Keyboard className="h-4 w-4" />,
         run: () => setShowShortcuts(true),
       },
       {
         id: "a-help",
-        group: "Actions",
-        label: "Aide / Guide interactif",
+        group: t("app.palette.groupActions"),
+        label: t("app.palette.help"),
         icon: <Sparkles className="h-4 w-4" />,
         run: () => setShowHelp(true),
       }
     );
     const palViews: [ViewMode, string][] = [
-      ["graph", "Vue : Branch graph"],
-      ["commits", "Vue : Commit graph"],
-      ["tree", "Vue : Tree"],
-      ["prs", "Vue : Pull requests"],
-      ["issues", "Vue : Issues"],
-      ["docs", "Vue : Markdown docs"],
+      ["graph", t("app.palette.viewBranchGraph")],
+      ["commits", t("app.palette.viewCommitGraph")],
+      ["tree", t("app.palette.viewTree")],
+      ["prs", t("app.palette.viewPrs")],
+      ["issues", t("app.palette.viewIssues")],
+      ["docs", t("app.palette.viewDocs")],
     ];
     for (const [m, label] of palViews) {
       paletteItems.push({
         id: `v-${m}`,
-        group: "Vues",
+        group: t("app.palette.groupViews"),
         label,
         icon: <ListTree className="h-4 w-4" />,
         run: () => setViewMode(m),
@@ -724,23 +731,23 @@ export default function App() {
   // Per-feature guides launched from the "Tester" buttons in the help page. Each navigates
   // to the feature (action), then spotlights/explains it — without blocking interaction.
   const guides: Record<string, GuideStep[]> = {
-    "view-graph": [{ action: () => setViewMode("graph"), title: "Graphe des branches", body: "Voici ta pile. Glisse une branche sur une autre pour la re-parenter ; les pastilles montrent l'état (CI, review, retard…)." }],
-    "view-commits": [{ action: () => setViewMode("commits"), selector: '[data-tour="commit-search"]', title: "Graphe des commits", body: "Le DAG des commits. Tape ici pour filtrer par message / sha / auteur." }],
-    "commit-search": [{ action: () => setViewMode("commits"), selector: '[data-tour="commit-search"]', title: "Recherche de commits", body: "Tape : les commits non-matchés s'estompent et la vue se recentre sur les résultats." }],
-    "commit-ops": [{ action: () => setViewMode("commits"), title: "Actions de commit", body: "Clique un commit → panneau de détail : Summary/Detailed, AI Review, Cherry-pick, et au survol reword (IA) / split / drop / squash / move." }],
-    tree: [{ action: () => setViewMode("tree"), title: "Vue Tree", body: "La pile en liste. Survole une branche pour ses actions, clique-la pour le détail." }],
-    "branch-ops": [{ action: () => setViewMode("tree"), title: "Actions de branche", body: "Survole une branche → checkout, set parent, restack, merge, track/untrack." }],
-    prs: [{ action: () => setViewMode("prs"), title: "Pull requests", body: "Ouvre une PR : Approuver / Changements / Commenter, checks CI + logs, AI Review (postable en commentaires inline sur la PR)." }],
-    issues: [{ action: () => setViewMode("issues"), title: "Issues", body: "La liste des issues et leur détail." }],
-    docs: [{ action: () => setViewMode("docs"), title: "Docs", body: "Les fichiers Markdown du dépôt." }],
-    views: [{ selector: '[data-tour="views"]', title: "Vues", body: "Clique pour changer de vue (ou les touches 1–6)." }],
-    sync: [{ selector: '[data-tour="stack-actions"]', title: "Sync / Restack / Undo", body: "Sync met à jour, Restack rebase la pile, Undo annule. Clique pour tester." }],
-    "new-branch": [{ selector: '[data-tour="new-branch"]', title: "Nouvelle branche", body: "Clique pour créer une branche (nom suggéré par l'IA)." }],
-    submit: [{ selector: '[data-tour="submit"]', title: "Submit", body: "Pousse et ouvre/met à jour les PRs. Clique pour voir le plan et la description rédigée par l'IA." }],
-    claude: [{ selector: '[data-tour="claude"]', title: "Assistant IA", body: "Clique pour discuter du dépôt avec Claude." }],
-    stash: [{ action: () => setShowStash(true), title: "Stashes", body: "Voici tes stashes : déplie pour voir les fichiers, puis Apply / Pop / Drop." }],
-    palette: [{ action: () => setShowPalette(true), title: "Palette de commandes", body: "Tape une branche, une PR, une action… Entrée pour lancer, Échap pour fermer." }],
-    shortcuts: [{ action: () => setShowShortcuts(true), title: "Raccourcis clavier", body: "La liste des raccourcis (tu peux aussi appuyer sur ?)." }],
+    "view-graph": [{ action: () => setViewMode("graph"), title: t("app.guides.viewGraph.title"), body: t("app.guides.viewGraph.body") }],
+    "view-commits": [{ action: () => setViewMode("commits"), selector: '[data-tour="commit-search"]', title: t("app.guides.viewCommits.title"), body: t("app.guides.viewCommits.body") }],
+    "commit-search": [{ action: () => setViewMode("commits"), selector: '[data-tour="commit-search"]', title: t("app.guides.commitSearch.title"), body: t("app.guides.commitSearch.body") }],
+    "commit-ops": [{ action: () => setViewMode("commits"), title: t("app.guides.commitOps.title"), body: t("app.guides.commitOps.body") }],
+    tree: [{ action: () => setViewMode("tree"), title: t("app.guides.tree.title"), body: t("app.guides.tree.body") }],
+    "branch-ops": [{ action: () => setViewMode("tree"), title: t("app.guides.branchOps.title"), body: t("app.guides.branchOps.body") }],
+    prs: [{ action: () => setViewMode("prs"), title: t("app.guides.prs.title"), body: t("app.guides.prs.body") }],
+    issues: [{ action: () => setViewMode("issues"), title: t("app.guides.issues.title"), body: t("app.guides.issues.body") }],
+    docs: [{ action: () => setViewMode("docs"), title: t("app.guides.docs.title"), body: t("app.guides.docs.body") }],
+    views: [{ selector: '[data-tour="views"]', title: t("app.guides.views.title"), body: t("app.guides.views.body") }],
+    sync: [{ selector: '[data-tour="stack-actions"]', title: t("app.guides.sync.title"), body: t("app.guides.sync.body") }],
+    "new-branch": [{ selector: '[data-tour="new-branch"]', title: t("app.guides.newBranch.title"), body: t("app.guides.newBranch.body") }],
+    submit: [{ selector: '[data-tour="submit"]', title: t("app.guides.submit.title"), body: t("app.guides.submit.body") }],
+    claude: [{ selector: '[data-tour="claude"]', title: t("app.guides.claude.title"), body: t("app.guides.claude.body") }],
+    stash: [{ action: () => setShowStash(true), title: t("app.guides.stash.title"), body: t("app.guides.stash.body") }],
+    palette: [{ action: () => setShowPalette(true), title: t("app.guides.palette.title"), body: t("app.guides.palette.body") }],
+    shortcuts: [{ action: () => setShowShortcuts(true), title: t("app.guides.shortcuts.title"), body: t("app.guides.shortcuts.body") }],
   };
 
   const panel =
@@ -809,7 +816,7 @@ export default function App() {
                 gitui
               </div>
               <div className="text-[10px] uppercase tracking-wider text-neutral-500">
-                stacked PRs
+                {t("app.sidebar.tagline")}
               </div>
             </div>
           </div>
@@ -817,7 +824,7 @@ export default function App() {
           <div className="flex h-14 items-center gap-2 border-b border-neutral-800 px-4">
             <GitBranch className="h-5 w-5 text-indigo-400" />
             <span className="font-semibold tracking-tight">gitui</span>
-            <span className="text-xs text-neutral-500">stacked PRs</span>
+            <span className="text-xs text-neutral-500">{t("app.sidebar.tagline")}</span>
           </div>
         )}
 
@@ -839,7 +846,7 @@ export default function App() {
           }
         >
           <Boxes className="h-4 w-4 text-indigo-400" />
-          Workspace
+          {t("app.sidebar.workspace")}
           <span
             className={
               isModern
@@ -852,19 +859,19 @@ export default function App() {
         </button>
         <div className="flex items-center justify-between px-4 py-3">
           <span className="text-xs uppercase tracking-wider text-neutral-500">
-            Repositories
+            {t("app.sidebar.repositories")}
           </span>
           <div className="flex items-center gap-0.5">
             <button
               onClick={() => setGroupDialog({ mode: "new" })}
-              title="New group"
+              title={t("app.sidebar.newGroup")}
               className="rounded p-1 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100"
             >
               <FolderTree className="h-4 w-4" />
             </button>
             <button
               onClick={() => setShowAdd(true)}
-              title="Add repository"
+              title={t("app.sidebar.addRepository")}
               className="rounded p-1 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100"
             >
               <FolderPlus className="h-4 w-4" />
@@ -905,24 +912,24 @@ export default function App() {
           ) : isModern ? (
             <span className="inline-flex items-center gap-1.5 rounded-full bg-neutral-800/60 px-2 py-0.5 text-neutral-500">
               <span className="h-1.5 w-1.5 rounded-full bg-neutral-600" />
-              gh: not logged in
+              {t("app.footer.ghNotLoggedIn")}
             </span>
           ) : (
-            <span className="text-neutral-500">gh: not logged in</span>
+            <span className="text-neutral-500">{t("app.footer.ghNotLoggedIn")}</span>
           )}
           <div className="flex items-center gap-1.5">
             {health && dependenciesIncomplete(health) && (
               <button
                 onClick={() => setShowDeps(true)}
-                title="Des outils requis manquent — cliquer pour voir"
+                title={t("app.footer.toolsMissing")}
                 className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-amber-400 ring-1 ring-inset ring-amber-500/20 hover:bg-amber-500/20"
               >
-                <AlertTriangle className="h-3 w-3" /> outils
+                <AlertTriangle className="h-3 w-3" /> {t("app.footer.tools")}
               </button>
             )}
             <button
               onClick={() => setShowSettings(true)}
-              title="Settings"
+              title={t("app.header.settings")}
               className="rounded p-1 text-neutral-500 hover:bg-neutral-800 hover:text-neutral-200"
             >
               <SettingsIcon className="h-3.5 w-3.5" />
@@ -941,7 +948,7 @@ export default function App() {
           {workspace ? (
             <>
               <h1 className="text-sm font-medium text-neutral-200">
-                Workspace — repository links
+                {t("app.header.workspaceTitle")}
               </h1>
               {groupState.groups.length > 0 && (
                 <div className="ml-auto">
@@ -965,7 +972,7 @@ export default function App() {
               >
                 {repoName(selected!)}
               </h1>
-              <span className="text-xs text-neutral-500">Loading…</span>
+              <span className="text-xs text-neutral-500">{t("app.header.loading")}</span>
             </>
           ) : view ? (
             <>
@@ -986,18 +993,18 @@ export default function App() {
                 }
               >
                 {isModern && <GitBranch className="h-3 w-3 text-indigo-400" />}
-                trunk: {view.trunk}
+                {t("app.header.trunk", { trunk: view.trunk })}
               </span>
               {!view.prsAvailable && (
-                <span className="text-xs text-neutral-600">PRs unavailable</span>
+                <span className="text-xs text-neutral-600">{t("app.header.prsUnavailable")}</span>
               )}
               <div className="ml-auto flex items-center gap-2">
                 <button
                   onClick={() => checkAllUpdates()}
                   title={
                     totalUpdates > 0
-                      ? `${totalUpdates} new update(s) across repos`
-                      : "Check for updates"
+                      ? t("app.header.updatesCount", { count: totalUpdates })
+                      : t("app.header.checkUpdates")
                   }
                   className="relative rounded p-1.5 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100"
                 >
@@ -1011,7 +1018,7 @@ export default function App() {
                 <button
                   data-tour="stash"
                   onClick={() => setShowStash(true)}
-                  title={stashCount > 0 ? `${stashCount} stash(es)` : "Stashes"}
+                  title={stashCount > 0 ? t("app.header.stashCount", { count: stashCount }) : t("app.header.stashes")}
                   className="relative rounded p-1.5 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100"
                 >
                   <Archive className="h-4 w-4" />
@@ -1029,12 +1036,12 @@ export default function App() {
                       : "flex rounded-md border border-neutral-700 p-0.5"
                   }
                 >
-                  {toggle("graph", "Branch graph", <Network className="h-4 w-4" />)}
-                  {toggle("commits", "Commit graph", <Waypoints className="h-4 w-4" />)}
-                  {toggle("tree", "Tree", <ListTree className="h-4 w-4" />)}
-                  {toggle("prs", "Pull requests", <GitPullRequest className="h-4 w-4" />)}
-                  {toggle("issues", "Issues", <CircleDot className="h-4 w-4" />)}
-                  {toggle("docs", "Markdown docs", <FileText className="h-4 w-4" />)}
+                  {toggle("graph", t("app.views.branchGraph"), <Network className="h-4 w-4" />)}
+                  {toggle("commits", t("app.views.commitGraph"), <Waypoints className="h-4 w-4" />)}
+                  {toggle("tree", t("app.views.tree"), <ListTree className="h-4 w-4" />)}
+                  {toggle("prs", t("app.views.pullRequests"), <GitPullRequest className="h-4 w-4" />)}
+                  {toggle("issues", t("app.views.issues"), <CircleDot className="h-4 w-4" />)}
+                  {toggle("docs", t("app.views.markdownDocs"), <FileText className="h-4 w-4" />)}
                 </div>
                 {isModern && <div className="mx-0.5 h-5 w-px bg-neutral-800" />}
                 <div
@@ -1048,10 +1055,10 @@ export default function App() {
                   <button
                     onClick={async () => {
                       if (selected && (await runMutation(api.sync(selected))))
-                        notify("Synced ✓");
+                        notify(t("app.toast.synced"));
                     }}
                     disabled={loading || !!view.conflict}
-                    title="Sync : fetch + fast-forward du tronc + nettoyage des PR mergées, puis restack"
+                    title={t("app.actions.syncTitle")}
                     className="rounded p-1.5 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100 disabled:opacity-40"
                   >
                     <DownloadCloud className="h-4 w-4" />
@@ -1059,7 +1066,7 @@ export default function App() {
                   <button
                     onClick={() => selected && runMutation(api.restack(selected, null))}
                     disabled={loading || !!view.conflict}
-                    title="Restack toute la pile sur ses parents"
+                    title={t("app.actions.restackTitle")}
                     className="rounded p-1.5 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100 disabled:opacity-40"
                   >
                     <Layers className="h-4 w-4" />
@@ -1067,10 +1074,10 @@ export default function App() {
                   <button
                     onClick={async () => {
                       if (selected && undoLabel && (await runMutation(api.undo(selected))))
-                        notify("Undone ✓");
+                        notify(t("app.toast.undone"));
                     }}
                     disabled={loading || !undoLabel || !!view.conflict}
-                    title={undoLabel ? `Annuler : ${undoLabel}` : "Rien à annuler"}
+                    title={undoLabel ? t("app.actions.undoTitle", { label: undoLabel }) : t("app.actions.nothingToUndo")}
                     className="rounded p-1.5 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100 disabled:opacity-40"
                   >
                     <Undo2 className="h-4 w-4" />
@@ -1083,7 +1090,7 @@ export default function App() {
                   }
                   className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-indigo-500"
                 >
-                  <Plus className="h-3.5 w-3.5" /> New branch
+                  <Plus className="h-3.5 w-3.5" /> {t("app.header.newBranch")}
                 </button>
                 <button
                   data-tour="submit"
@@ -1091,8 +1098,8 @@ export default function App() {
                   disabled={loading || !view.prsAvailable || !!view.conflict}
                   title={
                     view.prsAvailable
-                      ? "Push branches and open/update PRs bottom-up"
-                      : "Sign in with gh and add a GitHub remote to submit"
+                      ? t("app.header.submitTitle")
+                      : t("app.header.submitUnavailable")
                   }
                   className="inline-flex items-center gap-1.5 rounded-md bg-emerald-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
                 >
@@ -1104,7 +1111,7 @@ export default function App() {
                     selected &&
                     setTerminal({ repoPath: selected, target: { kind: "repo" }, mode: "" })
                   }
-                  title={`Demander à ${aiName} (discuter du dépôt)`}
+                  title={t("app.header.askAiRepo", { name: aiName })}
                   className="rounded p-1.5 text-indigo-300 hover:bg-indigo-950/40"
                 >
                   <Sparkles className="h-4 w-4" />
@@ -1112,7 +1119,7 @@ export default function App() {
                 {isModern && <div className="mx-0.5 h-5 w-px bg-neutral-800" />}
                 <button
                   onClick={() => setShowCmdLog((v) => !v)}
-                  title="Journal des commandes : voir les commandes git/gh exécutées par l'app"
+                  title={t("app.header.commandLogTitle")}
                   className={
                     showCmdLog
                       ? "rounded bg-indigo-950/40 p-1.5 text-indigo-300"
@@ -1126,14 +1133,14 @@ export default function App() {
                     selected &&
                     api.openInVscode(selected).catch((e) => setError(errorText(e)))
                   }
-                  title="Open repository in VS Code"
+                  title={t("app.header.openInVscode")}
                   className="rounded p-1.5 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100"
                 >
                   <Code2 className="h-4 w-4" />
                 </button>
                 <button
                   onClick={() => refresh(selected)}
-                  title="Refresh"
+                  title={t("common.refresh")}
                   className="rounded p-1.5 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100"
                 >
                   <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
@@ -1141,7 +1148,7 @@ export default function App() {
               </div>
             </>
           ) : (
-            <h1 className="text-sm font-medium text-neutral-400">No repository selected</h1>
+            <h1 className="text-sm font-medium text-neutral-400">{t("app.header.noRepoSelected")}</h1>
           )}
         </header>
 
@@ -1236,28 +1243,27 @@ export default function App() {
                           <GitBranch className="h-8 w-8 text-indigo-400" />
                         </div>
                         <h2 className="text-base font-semibold text-neutral-100">
-                          No repository yet
+                          {t("app.empty.noRepoTitle")}
                         </h2>
                         <p className="mt-1 max-w-xs text-sm text-neutral-500">
-                          Add a git repository to visualize and manage your stacked branches
-                          and pull requests.
+                          {t("app.empty.noRepoBody")}
                         </p>
                         <button
                           onClick={() => setShowAdd(true)}
                           className="mt-5 inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-500"
                         >
-                          <FolderPlus className="h-4 w-4" /> Add repository
+                          <FolderPlus className="h-4 w-4" /> {t("app.empty.addRepository")}
                         </button>
                       </div>
                     ) : (
                       <div className="flex h-full flex-col items-center justify-center text-center text-neutral-600">
                         <GitBranch className="mb-3 h-10 w-10 text-neutral-700" />
-                        <p className="text-sm">Add a git repository to see your branch stack.</p>
+                        <p className="text-sm">{t("app.empty.noRepoBodyClassic")}</p>
                         <button
                           onClick={() => setShowAdd(true)}
                           className="mt-4 inline-flex items-center gap-2 rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500"
                         >
-                          <FolderPlus className="h-4 w-4" /> Add repository
+                          <FolderPlus className="h-4 w-4" /> {t("app.empty.addRepository")}
                         </button>
                       </div>
                     )
@@ -1265,7 +1271,7 @@ export default function App() {
                     <div className="flex h-full flex-col items-center justify-center gap-3">
                       <Spinner className="h-7 w-7" />
                       <p className="text-sm text-neutral-500">
-                        Loading {repoName(selected)}…
+                        {t("app.empty.loadingRepo", { name: repoName(selected) })}
                       </p>
                     </div>
                   ) : !view ? null : viewMode === "issues" ? (
@@ -1296,7 +1302,7 @@ export default function App() {
                       onReparent={(branch, newParent) =>
                         selected &&
                         runMutation(api.setParent(selected, branch, newParent)).then(
-                          (ok) => ok && notify(`${branch} → ${newParent}`)
+                          (ok) => ok && notify(t("app.toast.reparented", { branch, newParent }))
                         )
                       }
                     />
@@ -1312,7 +1318,7 @@ export default function App() {
                           data-tour="commit-search"
                           value={commitSearch}
                           onChange={(e) => setCommitSearch(e.target.value)}
-                          placeholder="Rechercher un commit…"
+                          placeholder={t("app.commits.searchPlaceholder")}
                           className="w-56 rounded-md border border-neutral-700 bg-neutral-900/90 px-2.5 py-1.5 text-xs text-neutral-100 shadow-sm outline-none focus:border-indigo-600"
                         />
                       </div>
@@ -1335,7 +1341,7 @@ export default function App() {
                         {view.untracked.length > 0 && (
                           <div className="mt-8">
                             <h2 className="mb-2 text-xs uppercase tracking-wider text-neutral-500">
-                              Untracked branches
+                              {t("app.tree.untrackedBranches")}
                             </h2>
                             <div className="space-y-0.5 opacity-90">
                               {view.untracked.map((b) => (
@@ -1361,7 +1367,7 @@ export default function App() {
                 <>
                   <div
                     onMouseDown={startResize}
-                    title="Drag to resize"
+                    title={t("app.panel.dragToResize")}
                     className="w-1 shrink-0 cursor-col-resize bg-neutral-800 transition-colors hover:bg-indigo-600"
                   />
                   <div style={{ width: panelWidth }} className="flex min-w-0 shrink-0">
@@ -1442,7 +1448,7 @@ export default function App() {
           onDone={(v, summary) => {
             setView(v);
             setShowSubmit(false);
-            notify(`Submitted — ${summary}`);
+            notify(t("app.toast.submitted", { summary }));
           }}
         />
       )}
@@ -1500,7 +1506,7 @@ export default function App() {
           onClose={() => setShowHelp(false)}
           onStartTour={() => {
             setShowHelp(false);
-            setGuideSteps(MAIN_TOUR);
+            setGuideSteps(MAIN_TOUR(t));
           }}
           onTest={(id) => {
             const g = guides[id];
@@ -1522,8 +1528,8 @@ export default function App() {
       {guideSteps && <Tour steps={guideSteps} onClose={() => setGuideSteps(null)} />}
       {groupDialog?.mode === "new" && (
         <GroupNameDialog
-          title="New group"
-          confirmLabel="Create"
+          title={t("app.group.newTitle")}
+          confirmLabel={t("common.create")}
           onClose={() => setGroupDialog(null)}
           onSubmit={(name) => {
             mutateGroups((s) => createGroup(s, name).state);
@@ -1533,8 +1539,8 @@ export default function App() {
       )}
       {groupDialog?.mode === "assign" && (
         <GroupNameDialog
-          title="New group"
-          confirmLabel="Create & move"
+          title={t("app.group.newTitle")}
+          confirmLabel={t("app.group.createAndMove")}
           onClose={() => setGroupDialog(null)}
           onSubmit={(name) => {
             createGroupAndAssign(groupDialog.path, name);
@@ -1544,8 +1550,8 @@ export default function App() {
       )}
       {groupDialog?.mode === "rename" && (
         <GroupNameDialog
-          title="Rename group"
-          confirmLabel="Rename"
+          title={t("app.group.renameTitle")}
+          confirmLabel={t("app.group.rename")}
           initial={
             groupState.groups.find((g) => g.id === groupDialog.id)?.name ?? ""
           }

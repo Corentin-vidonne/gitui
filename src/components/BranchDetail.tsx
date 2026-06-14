@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import {
   X,
   ExternalLink,
@@ -103,6 +104,7 @@ function RewordDialog({
   onSubmit: (message: string) => void;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const [msg, setMsg] = useState(commit.subject);
   const [genning, setGenning] = useState<"simple" | "complet" | null>(null);
   const [genError, setGenError] = useState<string | null>(null);
@@ -120,10 +122,10 @@ function RewordDialog({
   }
 
   return (
-    <Modal title="Reword commit" onClose={onClose}>
+    <Modal title={t("branchDetail.reword.title")} onClose={onClose}>
       <div className="space-y-3">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs text-neutral-500">Générer&nbsp;:</span>
+          <span className="text-xs text-neutral-500">{t("branchDetail.reword.generate")}&nbsp;:</span>
           {(["simple", "complet"] as const).map((m) => (
             <button
               key={m}
@@ -131,8 +133,8 @@ function RewordDialog({
               disabled={!!genning || busy}
               title={
                 m === "simple"
-                  ? "Message court (≤5 mots), préfixe conventionnel"
-                  : "Message complet (sujet + corps), préfixe conventionnel"
+                  ? t("branchDetail.reword.simpleHint")
+                  : t("branchDetail.reword.completHint")
               }
               className="inline-flex items-center gap-1 rounded-md border border-indigo-700 px-2 py-1 text-xs capitalize text-indigo-300 hover:bg-indigo-950/40 disabled:opacity-50"
             >
@@ -141,7 +143,7 @@ function RewordDialog({
               ) : (
                 <Sparkles className="h-3 w-3" />
               )}{" "}
-              {m}
+              {m === "simple" ? t("branchDetail.reword.simple") : t("branchDetail.reword.complet")}
             </button>
           ))}
         </div>
@@ -162,14 +164,14 @@ function RewordDialog({
             onClick={onClose}
             className="rounded-md px-3 py-1.5 text-sm text-neutral-400 hover:bg-neutral-800"
           >
-            Cancel
+            {t("common.cancel")}
           </button>
           <button
             onClick={() => onSubmit(msg.trim())}
             disabled={busy || !msg.trim()}
             className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
           >
-            Save
+            {t("common.save")}
           </button>
         </div>
       </div>
@@ -206,6 +208,7 @@ function SplitDialog({
   onSubmit: (lines: number[], msg1: string, msg2: string) => void;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const [files, setFiles] = useState<SplitDiffFile[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -259,12 +262,12 @@ function SplitDialog({
   const allOn = (ids: number[]) => ids.length > 0 && ids.every((id) => selected.has(id));
 
   return (
-    <Modal title="Split commit" onClose={onClose}>
+    <Modal title={t("branchDetail.split.title")} onClose={onClose}>
       <div className="space-y-3">
         <p className="text-xs text-neutral-400">
-          Coche les lignes (ou hunks / fichiers entiers) du{" "}
-          <strong className="text-neutral-200">premier</strong> commit, bas de pile ; le
-          reste ira dans le second. À la <code>git add -p</code>.
+          {t("branchDetail.split.introBefore")}{" "}
+          <strong className="text-neutral-200">{t("branchDetail.split.introFirst")}</strong>{" "}
+          {t("branchDetail.split.introAfter")} <code>git add -p</code>.
         </p>
         {loadError && (
           <div className="rounded-md border border-red-900 bg-red-950/40 px-2 py-1 text-[11px] text-red-300">
@@ -272,12 +275,11 @@ function SplitDialog({
           </div>
         )}
         {files === null && !loadError && (
-          <p className="text-xs text-neutral-500">Analyse du diff…</p>
+          <p className="text-xs text-neutral-500">{t("branchDetail.split.analyzing")}</p>
         )}
         {files && total === 0 && !loadError && (
           <div className="rounded-md border border-amber-900 bg-amber-950/40 px-2 py-1 text-[11px] text-amber-300">
-            Aucune ligne découpable (binaire / suppression de fichier). Utilise plutôt drop
-            ou squash.
+            {t("branchDetail.split.noSplittable")}
           </div>
         )}
         {files && total > 0 && (
@@ -287,16 +289,17 @@ function SplitDialog({
                 onClick={() => setMany(allIds, true)}
                 className="rounded border border-neutral-700 px-1.5 py-0.5 hover:bg-neutral-800"
               >
-                Tout cocher
+                {t("branchDetail.split.checkAll")}
               </button>
               <button
                 onClick={() => setMany(allIds, false)}
                 className="rounded border border-neutral-700 px-1.5 py-0.5 hover:bg-neutral-800"
               >
-                Tout décocher
+                {t("branchDetail.split.uncheckAll")}
               </button>
               <span className="ml-auto">
-                {nSel} → 1<sup>er</sup> · {total - nSel} → 2<sup>e</sup>
+                {nSel} → 1<sup>{t("branchDetail.split.ordFirst")}</sup> · {total - nSel} → 2
+                <sup>{t("branchDetail.split.ordSecond")}</sup>
               </span>
             </div>
             <div className="max-h-72 overflow-auto rounded-md border border-neutral-800 font-mono text-[11px] leading-relaxed">
@@ -311,7 +314,7 @@ function SplitDialog({
                           checked={allOn(fids)}
                           onChange={(e) => setMany(fids, e.target.checked)}
                           className="accent-indigo-500"
-                          title="Tout le fichier"
+                          title={t("branchDetail.split.wholeFile")}
                         />
                       ) : (
                         <span className="w-3.5 shrink-0" />
@@ -319,7 +322,8 @@ function SplitDialog({
                       <span className="truncate text-neutral-300">{f.path}</span>
                       {!f.selectable && (
                         <span className="ml-auto shrink-0 text-[10px] text-neutral-500">
-                          → 2<sup>e</sup> commit
+                          → 2<sup>{t("branchDetail.split.ordSecond")}</sup>{" "}
+                          {t("branchDetail.split.commitWord")}
                         </span>
                       )}
                     </div>
@@ -334,7 +338,7 @@ function SplitDialog({
                                 checked={allOn(hids)}
                                 onChange={(e) => setMany(hids, e.target.checked)}
                                 className="accent-indigo-500"
-                                title="Tout le hunk"
+                                title={t("branchDetail.split.wholeHunk")}
                               />
                               <span className="truncate">{h.header}</span>
                             </div>
@@ -374,7 +378,8 @@ function SplitDialog({
             </div>
             <div className="space-y-1">
               <label className="text-[11px] text-neutral-500">
-                Message du 1<sup>er</sup> commit (lignes cochées)
+                {t("branchDetail.split.msg1Before")}1<sup>{t("branchDetail.split.ordFirst")}</sup>{" "}
+                {t("branchDetail.split.msg1After")}
               </label>
               <textarea
                 value={msg1}
@@ -385,7 +390,8 @@ function SplitDialog({
             </div>
             <div className="space-y-1">
               <label className="text-[11px] text-neutral-500">
-                Message du 2<sup>e</sup> commit (le reste)
+                {t("branchDetail.split.msg2Before")}2<sup>{t("branchDetail.split.ordSecond")}</sup>{" "}
+                {t("branchDetail.split.msg2After")}
               </label>
               <textarea
                 value={msg2}
@@ -401,16 +407,12 @@ function SplitDialog({
             onClick={onClose}
             className="rounded-md px-3 py-1.5 text-sm text-neutral-400 hover:bg-neutral-800"
           >
-            Cancel
+            {t("common.cancel")}
           </button>
           <button
             onClick={() => onSubmit([...selected], msg1.trim(), msg2.trim())}
             disabled={busy || !valid}
-            title={
-              valid
-                ? ""
-                : "Coche au moins une ligne (laisses-en une pour le 2e) et renseigne les deux messages"
-            }
+            title={valid ? "" : t("branchDetail.split.invalidHint")}
             className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
           >
             <Scissors className="h-3.5 w-3.5" /> Split
@@ -437,6 +439,7 @@ export function BranchDetail({
   /** Called with the refreshed view after a commit edit. */
   onEdited?: (view: RepoView) => void;
 }) {
+  const { t } = useTranslation();
   const { isModern } = useTheme();
   const [commits, setCommits] = useState<CommitInfo[] | null>(null);
   const [busy, setBusy] = useState(false);
@@ -490,7 +493,7 @@ export function BranchDetail({
         <span className="truncate font-mono text-sm text-neutral-100">{branch.name}</span>
         {branch.isTrunk && (
           <span className="rounded bg-amber-900/40 px-1.5 py-0.5 text-[10px] text-amber-300">
-            trunk
+            {t("branchDetail.trunkBadge")}
           </span>
         )}
         {branch.isCurrent && (
@@ -509,33 +512,41 @@ export function BranchDetail({
       <div className="flex-1 space-y-4 overflow-auto p-4">
         <div className="space-y-1.5">
           <Row
-            label="Parent"
-            value={branch.parent ?? (branch.isTrunk ? "—" : "untracked")}
+            label={t("branchDetail.rows.parent")}
+            value={branch.parent ?? (branch.isTrunk ? "—" : t("branchDetail.rows.untracked"))}
             mono
           />
           {!branch.isTrunk && (
-            <Row label="Status" value={`${branch.ahead} ahead · ${branch.behind} behind`} />
+            <Row
+              label={t("branchDetail.rows.status")}
+              value={t("branchDetail.rows.aheadBehind", {
+                ahead: branch.ahead,
+                behind: branch.behind,
+              })}
+            />
           )}
-          {branch.baseSha && <Row label="Base" value={branch.baseSha.slice(0, 8)} mono />}
+          {branch.baseSha && (
+            <Row label={t("branchDetail.rows.base")} value={branch.baseSha.slice(0, 8)} mono />
+          )}
           <Row
-            label="Working tree"
-            value={branch.dirty ? "uncommitted changes" : "clean"}
+            label={t("branchDetail.rows.workingTree")}
+            value={branch.dirty ? t("branchDetail.rows.uncommitted") : t("branchDetail.rows.clean")}
           />
           <Row
-            label="Remote"
-            value={branch.needsPush ? "unpushed commits" : "up to date"}
+            label={t("branchDetail.rows.remote")}
+            value={branch.needsPush ? t("branchDetail.rows.unpushed") : t("branchDetail.rows.upToDate")}
           />
         </div>
 
         <div>
           <h4 className="mb-1 text-xs uppercase tracking-wider text-neutral-500">
-            Pull request
+            {t("branchDetail.pr.heading")}
           </h4>
           {branch.pr ? (
             <div className="flex items-center gap-2 rounded-md border border-neutral-700 px-3 py-2">
               <button
                 onClick={() => branch.pr && onOpenPr?.(branch.pr.number)}
-                title="View PR details"
+                title={t("branchDetail.pr.viewDetails")}
                 className="flex flex-1 items-center gap-2 text-left"
               >
                 <span className="font-mono text-xs text-neutral-200">#{branch.pr.number}</span>
@@ -559,24 +570,26 @@ export function BranchDetail({
               </button>
               <button
                 onClick={() => branch.pr && safeOpen(branch.pr.url)}
-                title="Open on GitHub"
+                title={t("branchDetail.pr.openOnGithub")}
                 className="rounded p-1 text-neutral-500 hover:bg-neutral-800 hover:text-neutral-200"
               >
                 <ExternalLink className="h-3.5 w-3.5" />
               </button>
             </div>
           ) : (
-            <p className="text-xs text-neutral-600">No PR yet.</p>
+            <p className="text-xs text-neutral-600">{t("branchDetail.pr.none")}</p>
           )}
         </div>
 
         <div>
           <h4 className="mb-1 text-xs uppercase tracking-wider text-neutral-500">
-            {branch.isTrunk ? "Recent commits" : "Commits on this branch"}
+            {branch.isTrunk
+              ? t("branchDetail.commits.recent")
+              : t("branchDetail.commits.onThisBranch")}
           </h4>
-          {commits === null && <p className="text-xs text-neutral-600">Loading…</p>}
+          {commits === null && <p className="text-xs text-neutral-600">{t("common.loading")}</p>}
           {commits && commits.length === 0 && (
-            <p className="text-xs text-neutral-600">No commits.</p>
+            <p className="text-xs text-neutral-600">{t("branchDetail.commits.none")}</p>
           )}
           {editError && (
             <div className="mb-2 rounded-md border border-red-900 bg-red-950/40 px-2 py-1 text-[11px] text-red-300">
@@ -602,37 +615,37 @@ export function BranchDetail({
                   {!branch.isTrunk && (
                     <div className="hidden shrink-0 items-center gap-0.5 group-hover:flex">
                       <CommitActionBtn
-                        title="Reword"
+                        title={t("branchDetail.commitActions.reword")}
                         icon={<Pencil className="h-3.5 w-3.5" />}
                         onClick={() => setDialog({ kind: "reword", commit: c })}
                         disabled={busy}
                       />
                       <CommitActionBtn
-                        title="Split (découper en deux commits)"
+                        title={t("branchDetail.commitActions.split")}
                         icon={<Scissors className="h-3.5 w-3.5" />}
                         onClick={() => setDialog({ kind: "split", commit: c })}
                         disabled={busy}
                       />
                       <CommitActionBtn
-                        title="Squash into older commit"
+                        title={t("branchDetail.commitActions.squash")}
                         icon={<Combine className="h-3.5 w-3.5" />}
                         onClick={() => runEdit(api.squashCommit(repoPath, branch.name, c.sha))}
                         disabled={busy || isOldest}
                       />
                       <CommitActionBtn
-                        title="Move newer"
+                        title={t("branchDetail.commitActions.moveNewer")}
                         icon={<ArrowUp className="h-3.5 w-3.5" />}
                         onClick={() => runEdit(api.moveCommit(repoPath, branch.name, c.sha, "up"))}
                         disabled={busy || isNewest}
                       />
                       <CommitActionBtn
-                        title="Move older"
+                        title={t("branchDetail.commitActions.moveOlder")}
                         icon={<ArrowDown className="h-3.5 w-3.5" />}
                         onClick={() => runEdit(api.moveCommit(repoPath, branch.name, c.sha, "down"))}
                         disabled={busy || isOldest}
                       />
                       <CommitActionBtn
-                        title="Drop"
+                        title={t("branchDetail.commitActions.drop")}
                         icon={<Trash2 className="h-3.5 w-3.5" />}
                         onClick={() => setDialog({ kind: "drop", commit: c })}
                         disabled={busy}
@@ -652,24 +665,24 @@ export function BranchDetail({
           {!branch.isCurrent && (
             <ActionBtn
               icon={<ArrowRightToLine className="h-3.5 w-3.5" />}
-              label="Checkout"
+              label={t("branchDetail.actions.checkout")}
               onClick={() => onAction("checkout", branch)}
             />
           )}
           <ActionBtn
             icon={<Plus className="h-3.5 w-3.5" />}
-            label="New branch"
+            label={t("branchDetail.actions.newBranch")}
             onClick={() => onAction("new-child", branch)}
           />
           <ActionBtn
             icon={<GitMerge className="h-3.5 w-3.5" />}
-            label="Merge"
+            label={t("branchDetail.actions.merge")}
             onClick={() => onAction("merge", branch)}
           />
           {!branch.isTrunk && branch.needsPush && (
             <ActionBtn
               icon={<UploadCloud className="h-3.5 w-3.5" />}
-              label="Publish"
+              label={t("branchDetail.actions.publish")}
               onClick={() => onAction("publish", branch)}
             />
           )}
@@ -678,24 +691,24 @@ export function BranchDetail({
               <>
                 <ActionBtn
                   icon={<Layers className="h-3.5 w-3.5" />}
-                  label="Restack"
+                  label={t("branchDetail.actions.restack")}
                   onClick={() => onAction("restack", branch)}
                 />
                 <ActionBtn
                   icon={<GitFork className="h-3.5 w-3.5" />}
-                  label="Set parent"
+                  label={t("branchDetail.actions.setParent")}
                   onClick={() => onAction("set-parent", branch)}
                 />
                 <ActionBtn
                   icon={<Unlink className="h-3.5 w-3.5" />}
-                  label="Untrack"
+                  label={t("branchDetail.actions.untrack")}
                   onClick={() => onAction("untrack", branch)}
                 />
               </>
             ) : (
               <ActionBtn
                 icon={<LinkIcon className="h-3.5 w-3.5" />}
-                label="Track"
+                label={t("branchDetail.actions.track")}
                 onClick={() => onAction("track", branch)}
               />
             ))}
@@ -728,18 +741,19 @@ export function BranchDetail({
         />
       )}
       {dialog?.kind === "drop" && (
-        <Modal title="Drop commit" onClose={() => setDialog(null)}>
+        <Modal title={t("branchDetail.drop.title")} onClose={() => setDialog(null)}>
           <div className="space-y-3">
             <p className="text-sm text-neutral-300">
-              Drop <span className="font-mono text-amber-300">{dialog.commit.sha}</span> “
-              {dialog.commit.subject}”? This rewrites the branch history.
+              {t("branchDetail.drop.confirmBefore")}{" "}
+              <span className="font-mono text-amber-300">{dialog.commit.sha}</span> “
+              {dialog.commit.subject}” {t("branchDetail.drop.confirmAfter")}
             </p>
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => setDialog(null)}
                 className="rounded-md px-3 py-1.5 text-sm text-neutral-400 hover:bg-neutral-800"
               >
-                Cancel
+                {t("common.cancel")}
               </button>
               <button
                 onClick={() =>

@@ -20,9 +20,11 @@
     "@xterm/xterm": "^6.0.0",
     "@xyflow/react": "^12.10.2",
     "dagre": "^0.8.5",
+    "i18next": "^26.3.1",
     "lucide-react": "^1.17.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "react-i18next": "^17.0.8",
     "react-markdown": "^10.1.0"
   },
   "devDependencies": {

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Modal } from "./Modal";
 
 const inputClass =
@@ -18,6 +19,7 @@ export function GroupNameDialog({
   onSubmit: (name: string) => void;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const [name, setName] = useState(initial);
   const valid = name.trim().length > 0;
 
@@ -36,7 +38,7 @@ export function GroupNameDialog({
           onKeyDown={(e) => {
             if (e.key === "Enter") submit();
           }}
-          placeholder="Group name"
+          placeholder={t("groupNameDialog.placeholder")}
           className={inputClass}
         />
         <div className="flex justify-end gap-2">
@@ -45,7 +47,7 @@ export function GroupNameDialog({
             onClick={onClose}
             className="rounded-md px-3 py-1.5 text-sm text-neutral-400 hover:bg-neutral-800"
           >
-            Cancel
+            {t("common.cancel")}
           </button>
           <button
             onClick={submit}

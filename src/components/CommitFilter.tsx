@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ListFilter, Check } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 /**
  * Branch filter for the commit graph. `value === null` means "all branches".
@@ -14,6 +15,7 @@ export function CommitFilter({
   value: string[] | null;
   onChange: (next: string[] | null) => void;
 }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -37,7 +39,9 @@ export function CommitFilter({
     else onChange([...next]);
   }
 
-  const label = isAll ? "All branches" : `${selected.size}/${branches.length} branches`;
+  const label = isAll
+    ? t("commitFilter.allBranches")
+    : t("commitFilter.someBranches", { selected: selected.size, total: branches.length });
 
   return (
     <div ref={ref} className="relative">
@@ -56,19 +60,19 @@ export function CommitFilter({
       {open && (
         <div className="absolute left-0 z-20 mt-1 w-56 rounded-md border border-neutral-700 bg-neutral-900 p-1 shadow-xl">
           <div className="flex items-center justify-between px-2 py-1 text-[10px] uppercase tracking-wider text-neutral-500">
-            <span>Show branches</span>
+            <span>{t("commitFilter.showBranches")}</span>
             <div className="flex gap-2">
               <button
                 onClick={() => onChange(null)}
                 className="text-indigo-300 hover:underline"
               >
-                All
+                {t("commitFilter.all")}
               </button>
               <button
                 onClick={() => onChange([])}
                 className="text-neutral-400 hover:underline"
               >
-                None
+                {t("common.none")}
               </button>
             </div>
           </div>

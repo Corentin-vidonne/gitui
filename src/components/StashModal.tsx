@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Archive, Trash2 } from "lucide-react";
 import { Modal } from "./Modal";
 import { api, errorText } from "../lib/api";
@@ -24,6 +25,7 @@ export function StashModal({
   /** Called after any op so the parent can refresh the working-tree view. */
   onChanged: () => void;
 }) {
+  const { t } = useTranslation();
   const [stashes, setStashes] = useState<StashEntry[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -59,19 +61,19 @@ export function StashModal({
   }
 
   return (
-    <Modal title="Stashes" onClose={onClose}>
+    <Modal title={t("stashModal.title")} onClose={onClose}>
       <div className="space-y-3">
         {/* Create a stash */}
         <div className="flex items-center gap-2">
           <input
             value={msg}
             onChange={(e) => setMsg(e.target.value)}
-            placeholder="Message (optionnel)"
+            placeholder={t("stashModal.messagePlaceholder")}
             className="min-w-0 flex-1 rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 outline-none focus:border-indigo-600"
           />
           <label
             className="flex shrink-0 items-center gap-1 text-xs text-neutral-400"
-            title="Inclure les fichiers non suivis"
+            title={t("stashModal.includeUntrackedTitle")}
           >
             <input
               type="checkbox"
@@ -79,15 +81,15 @@ export function StashModal({
               onChange={(e) => setInclUntracked(e.target.checked)}
               className="accent-indigo-600"
             />
-            non suivis
+            {t("stashModal.untracked")}
           </label>
           <button
             onClick={() => op(api.stashPush(repoPath, msg.trim() || null, inclUntracked))}
             disabled={!dirty || busy}
-            title={dirty ? "Stasher les changements en cours" : "Aucun changement à stasher"}
+            title={dirty ? t("stashModal.pushTitle") : t("stashModal.pushNothingTitle")}
             className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-indigo-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
           >
-            <Archive className="h-3.5 w-3.5" /> Stasher
+            <Archive className="h-3.5 w-3.5" /> {t("stashModal.push")}
           </button>
         </div>
 
@@ -99,9 +101,9 @@ export function StashModal({
 
         {/* Stash list with the files each one holds */}
         {stashes === null ? (
-          <p className="text-sm text-neutral-500">Chargement…</p>
+          <p className="text-sm text-neutral-500">{t("common.loading")}</p>
         ) : stashes.length === 0 ? (
-          <p className="py-6 text-center text-sm text-neutral-500">Aucun stash.</p>
+          <p className="py-6 text-center text-sm text-neutral-500">{t("stashModal.empty")}</p>
         ) : (
           <ul className="max-h-[55vh] space-y-2 overflow-auto">
             {stashes.map((s) => (
@@ -121,18 +123,18 @@ export function StashModal({
                     <button
                       onClick={() => op(api.stashApply(repoPath, s.refName))}
                       disabled={busy}
-                      title="Appliquer (garde le stash)"
+                      title={t("stashModal.applyTitle")}
                       className="rounded border border-neutral-700 px-2 py-0.5 text-[11px] text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
                     >
-                      Apply
+                      {t("stashModal.apply")}
                     </button>
                     <button
                       onClick={() => op(api.stashPop(repoPath, s.refName))}
                       disabled={busy}
-                      title="Appliquer puis supprimer"
+                      title={t("stashModal.popTitle")}
                       className="rounded border border-emerald-700 px-2 py-0.5 text-[11px] text-emerald-300 hover:bg-emerald-950/40 disabled:opacity-50"
                     >
-                      Pop
+                      {t("stashModal.pop")}
                     </button>
                     {pendingDrop === s.refName ? (
                       <button
@@ -140,16 +142,16 @@ export function StashModal({
                         disabled={busy}
                         className="inline-flex items-center gap-1 rounded bg-rose-600 px-2 py-0.5 text-[11px] font-medium text-white hover:bg-rose-500 disabled:opacity-50"
                       >
-                        <Trash2 className="h-3 w-3" /> Confirmer
+                        <Trash2 className="h-3 w-3" /> {t("common.confirm")}
                       </button>
                     ) : (
                       <button
                         onClick={() => setPendingDrop(s.refName)}
                         disabled={busy}
-                        title="Supprimer ce stash"
+                        title={t("stashModal.dropTitle")}
                         className="rounded border border-neutral-700 px-2 py-0.5 text-[11px] text-neutral-400 hover:bg-rose-950/40 hover:text-rose-300 disabled:opacity-50"
                       >
-                        Drop
+                        {t("stashModal.drop")}
                       </button>
                     )}
                   </span>
@@ -159,7 +161,7 @@ export function StashModal({
                 )}
                 <ul className="mt-1.5 space-y-0.5">
                   {s.files.length === 0 ? (
-                    <li className="text-[11px] text-neutral-600">(aucun fichier détecté)</li>
+                    <li className="text-[11px] text-neutral-600">{t("stashModal.noFiles")}</li>
                   ) : (
                     s.files.map((f, i) => (
                       <li key={i} className="flex items-center gap-1.5 text-[11px]">

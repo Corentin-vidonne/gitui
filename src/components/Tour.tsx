@@ -1,5 +1,6 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
+import { useTranslation } from "react-i18next";
 
 /** One step of a guide. `action` (e.g. switch view / open a panel) runs on entry, then
  * the element matching `selector` is spotlighted. No selector → a centered tooltip. */
@@ -17,6 +18,7 @@ function clamp(x: number, min: number, max: number) {
 /** A non-blocking guided overlay: spotlights elements and explains them, while letting
  * the user actually interact with the app (so a feature guide can be tried live). */
 export function Tour({ steps, onClose }: { steps: GuideStep[]; onClose: () => void }) {
+  const { t } = useTranslation();
   const [i, setI] = useState(0);
   const [rect, setRect] = useState<DOMRect | null>(null);
   const step = steps[i] ?? steps[0];
@@ -121,14 +123,14 @@ export function Tour({ steps, onClose }: { steps: GuideStep[]; onClose: () => vo
             onClick={onClose}
             className="ml-auto rounded px-2 py-1 text-xs text-neutral-400 hover:bg-neutral-800"
           >
-            Fermer
+            {t("common.close")}
           </button>
           {i > 0 && (
             <button
               onClick={() => setI(i - 1)}
               className="rounded border border-neutral-700 px-2 py-1 text-xs text-neutral-300 hover:bg-neutral-800"
             >
-              Précédent
+              {t("tour.previous")}
             </button>
           )}
           {!last && (
@@ -136,7 +138,7 @@ export function Tour({ steps, onClose }: { steps: GuideStep[]; onClose: () => vo
               onClick={() => setI(i + 1)}
               className="rounded-md bg-indigo-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-indigo-500"
             >
-              Suivant
+              {t("tour.next")}
             </button>
           )}
         </div>

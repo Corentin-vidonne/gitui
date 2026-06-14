@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import Markdown from "react-markdown";
 import { FileText, Plus, Eye, Code } from "lucide-react";
 import type { RepoView } from "../lib/types";
@@ -18,6 +19,7 @@ export function DocsView({
   defaultBranch: string;
   onCreated: (view: RepoView) => void;
 }) {
+  const { t } = useTranslation();
   const [files, setFiles] = useState<string[] | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [content, setContent] = useState<string>("");
@@ -89,16 +91,16 @@ export function DocsView({
               setMode("new");
               setNewBranch(defaultBranch);
             }}
-            title="New .md file"
+            title={t("docsView.newFileTitle")}
             className="inline-flex items-center gap-1 rounded bg-indigo-600 px-2 py-1 text-xs font-medium text-white hover:bg-indigo-500"
           >
-            <Plus className="h-3 w-3" /> New
+            <Plus className="h-3 w-3" /> {t("docsView.new")}
           </button>
         </div>
         <div className="flex-1 overflow-auto px-2 pb-2">
-          {!files && <p className="px-2 text-sm text-neutral-500">Loading…</p>}
+          {!files && <p className="px-2 text-sm text-neutral-500">{t("common.loading")}</p>}
           {files && files.length === 0 && (
-            <p className="px-2 text-sm text-neutral-600">No .md files.</p>
+            <p className="px-2 text-sm text-neutral-600">{t("docsView.noFiles")}</p>
           )}
           {files?.map((f) => (
             <button
@@ -132,13 +134,13 @@ export function DocsView({
               <input
                 value={newPath}
                 onChange={(e) => setNewPath(e.target.value)}
-                placeholder="path/to/file.md"
+                placeholder={t("docsView.pathPlaceholder")}
                 className="flex-1 rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 outline-none focus:border-indigo-600"
               />
               <select
                 value={newBranch}
                 onChange={(e) => setNewBranch(e.target.value)}
-                title="Commit on branch"
+                title={t("docsView.commitOnBranch")}
                 className="rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-sm text-neutral-100 outline-none focus:border-indigo-600"
               >
                 {branches.map((b) => (
@@ -152,25 +154,25 @@ export function DocsView({
                 disabled={saving || !newPath.trim()}
                 className="rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
               >
-                {saving ? "Committing…" : "Create & commit"}
+                {saving ? t("docsView.committing") : t("docsView.createAndCommit")}
               </button>
               <button
                 onClick={() => setMode("view")}
                 className="rounded-md px-3 py-1.5 text-sm text-neutral-400 hover:bg-neutral-800"
               >
-                Cancel
+                {t("common.cancel")}
               </button>
             </div>
             <div className="grid min-h-0 flex-1 grid-cols-2 gap-3">
               <textarea
                 value={newContent}
                 onChange={(e) => setNewContent(e.target.value)}
-                placeholder="# Title&#10;&#10;Write Markdown here…"
+                placeholder={t("docsView.contentPlaceholder")}
                 className="min-h-0 resize-none rounded-md border border-neutral-800 bg-neutral-950 p-3 font-mono text-sm text-neutral-100 outline-none focus:border-indigo-600"
               />
               <div className="min-h-0 overflow-auto rounded-md border border-neutral-800 bg-neutral-950/40 p-3">
                 <div className="markdown-body">
-                  <Markdown>{newContent || "*Preview*"}</Markdown>
+                  <Markdown>{newContent || t("docsView.previewPlaceholder")}</Markdown>
                 </div>
               </div>
             </div>
@@ -183,7 +185,7 @@ export function DocsView({
               <div className="ml-auto flex rounded-md border border-neutral-700 p-0.5">
                 <button
                   onClick={() => setRender("rendered")}
-                  title="Rendered"
+                  title={t("docsView.rendered")}
                   className={`rounded p-1 ${
                     render === "rendered"
                       ? "bg-neutral-700 text-neutral-100"
@@ -194,7 +196,7 @@ export function DocsView({
                 </button>
                 <button
                   onClick={() => setRender("raw")}
-                  title="Raw"
+                  title={t("docsView.raw")}
                   className={`rounded p-1 ${
                     render === "raw"
                       ? "bg-neutral-700 text-neutral-100"
@@ -219,7 +221,7 @@ export function DocsView({
           </>
         ) : (
           <div className="flex h-full items-center justify-center text-sm text-neutral-600">
-            Select a .md file, or create a new one.
+            {t("docsView.emptyState")}
           </div>
         )}
       </div>

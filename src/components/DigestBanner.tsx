@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Sparkles, X, Check, Loader2 } from "lucide-react";
 import Markdown from "react-markdown";
 import { api } from "../lib/api";
@@ -18,6 +19,7 @@ export function DigestBanner({
   onSeen: () => void;
   onDismiss: () => void;
 }) {
+  const { t } = useTranslation();
   const [text, setText] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -45,11 +47,11 @@ export function DigestBanner({
       <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-indigo-400" />
       <div className="min-w-0 flex-1">
         <div className="mb-0.5 text-[11px] font-medium uppercase tracking-wider text-indigo-300/80">
-          Depuis ta dernière visite · {items.length} nouveauté{items.length > 1 ? "s" : ""}
+          {t("digestBanner.header", { count: items.length })}
         </div>
         {text === null && !failed ? (
           <div className="flex items-center gap-1.5 text-xs text-neutral-400">
-            <Loader2 className="h-3 w-3 animate-spin" /> Résumé en cours…
+            <Loader2 className="h-3 w-3 animate-spin" /> {t("digestBanner.summarizing")}
           </div>
         ) : failed ? (
           <ul className="space-y-0.5 text-xs text-neutral-300">
@@ -60,7 +62,9 @@ export function DigestBanner({
               </li>
             ))}
             {items.length > 6 && (
-              <li className="text-neutral-500">… et {items.length - 6} de plus</li>
+              <li className="text-neutral-500">
+                {t("digestBanner.more", { count: items.length - 6 })}
+              </li>
             )}
           </ul>
         ) : (
@@ -72,14 +76,14 @@ export function DigestBanner({
       <div className="flex shrink-0 items-center gap-1">
         <button
           onClick={onSeen}
-          title="Marquer comme vu"
+          title={t("digestBanner.markSeen")}
           className="inline-flex items-center gap-1 rounded-md bg-indigo-600 px-2 py-1 text-xs font-medium text-white hover:bg-indigo-500"
         >
-          <Check className="h-3.5 w-3.5" /> Vu
+          <Check className="h-3.5 w-3.5" /> {t("digestBanner.seen")}
         </button>
         <button
           onClick={onDismiss}
-          title="Masquer pour l'instant"
+          title={t("digestBanner.dismiss")}
           className="rounded p-1 text-neutral-500 hover:bg-neutral-800 hover:text-neutral-300"
         >
           <X className="h-4 w-4" />

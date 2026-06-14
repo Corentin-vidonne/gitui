@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { GitPullRequest, GitMerge } from "lucide-react";
 import type { PrSummary } from "../lib/types";
 import { api, errorText } from "../lib/api";
@@ -26,6 +27,7 @@ export function PrList({
   selected: number | null;
   onSelect: (number: number) => void;
 }) {
+  const { t } = useTranslation();
   const [state, setState] = useState<PrState>("open");
   const [prs, setPrs] = useState<PrSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +58,7 @@ export function PrList({
                 : "text-neutral-400 hover:bg-neutral-900"
             }`}
           >
-            {s}
+            {t(`prList.states.${s}`)}
           </button>
         ))}
       </div>
@@ -67,9 +69,13 @@ export function PrList({
             {error}
           </div>
         )}
-        {!prs && !error && <p className="text-sm text-neutral-500">Loading…</p>}
+        {!prs && !error && <p className="text-sm text-neutral-500">{t("common.loading")}</p>}
         {prs && prs.length === 0 && (
-          <p className="text-sm text-neutral-600">No {state === "all" ? "" : state} pull requests.</p>
+          <p className="text-sm text-neutral-600">
+            {state === "all"
+              ? t("prList.emptyAll")
+              : t("prList.empty", { state: t(`prList.states.${state}`) })}
+          </p>
         )}
 
         <div className="mx-auto max-w-3xl space-y-1">
@@ -91,7 +97,7 @@ export function PrList({
               <span className="truncate text-sm text-neutral-200">{p.title}</span>
               {p.isDraft && (
                 <span className="shrink-0 rounded-full border border-neutral-700 px-1.5 text-[10px] text-neutral-400">
-                  draft
+                  {t("prList.draft")}
                 </span>
               )}
               <span className="ml-auto flex shrink-0 items-center gap-2 text-xs text-neutral-500">

@@ -1,5 +1,6 @@
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { GitBranch } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import type { Branch } from "../lib/types";
 import { reviewMark } from "./PrBadge";
 
@@ -18,6 +19,7 @@ function ciColor(c: string): string {
 }
 
 export function GraphNode({ data }: NodeProps) {
+  const { t } = useTranslation();
   const { branch: b, selected } = data as unknown as GraphNodeData;
   const untracked = !b.isTrunk && !b.tracked;
   const rev = b.pr ? reviewMark(b.pr.reviewDecision) : null;
@@ -48,23 +50,23 @@ export function GraphNode({ data }: NodeProps) {
         )}
       </div>
       <div className="mt-1 flex items-center gap-2 text-[10px]">
-        {untracked && <span className="text-neutral-500">untracked</span>}
+        {untracked && <span className="text-neutral-500">{t("graphNode.untracked")}</span>}
         {!b.isTrunk && b.behind > 0 && <span className="text-amber-300">↓{b.behind}</span>}
         {!b.isTrunk && b.ahead > 0 && <span className="text-emerald-300">↑{b.ahead}</span>}
         {b.dirty && (
-          <span className="text-rose-400" title="uncommitted changes">
+          <span className="text-rose-400" title={t("graphNode.uncommittedChanges")}>
             ●
           </span>
         )}
         {b.needsPush && (
-          <span className="text-sky-300" title="unpushed commits">
+          <span className="text-sky-300" title={t("graphNode.unpushedCommits")}>
             ⇡
           </span>
         )}
         {b.pr && (
           <span className="ml-auto flex items-center gap-0.5 font-mono">
             {b.pr.checks && (
-              <span className={ciColor(b.pr.checks)} title={`CI ${b.pr.checks}`}>
+              <span className={ciColor(b.pr.checks)} title={t("graphNode.ciStatus", { status: b.pr.checks })}>
                 ●
               </span>
             )}

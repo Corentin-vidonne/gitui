@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { AlertTriangle, Check, ExternalLink, RefreshCw, X } from "lucide-react";
 import { safeOpen } from "../lib/safeOpen";
 import type { Health } from "../lib/types";
@@ -7,7 +8,7 @@ type Tool = {
   name: string;
   /** Version string when installed, otherwise null. */
   version: string | null;
-  /** What gitui uses it for (French). */
+  /** What gitui uses it for. */
   desc: string;
   /** Where to install it. */
   url: string;
@@ -15,19 +16,19 @@ type Tool = {
   install: string;
 };
 
-function tools(h: Health): Tool[] {
+function tools(h: Health, t: (key: string) => string): Tool[] {
   return [
     {
       name: "Git",
       version: h.gitVersion,
-      desc: "Indispensable : toutes les opérations sur les branches, commits et la pile.",
+      desc: t("dependencyGate.tools.git.desc"),
       url: "https://git-scm.com/downloads",
       install: "winget install Git.Git · brew install git · apt install git",
     },
     {
       name: "GitHub CLI (gh)",
       version: h.ghVersion,
-      desc: "Pull requests, issues, checks CI et « Submit ».",
+      desc: t("dependencyGate.tools.gh.desc"),
       url: "https://cli.github.com/",
       install: "winget install GitHub.cli · brew install gh · apt install gh",
     },
@@ -51,8 +52,9 @@ export function DependencyGate({
   onRecheck: () => Promise<void> | void;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const [checking, setChecking] = useState(false);
-  const list = tools(health);
+  const list = tools(health, t);
   const missing = list.filter((t) => !t.version).length;
   const needsAuth = !!health.ghVersion && !health.ghAuthenticated;
 
@@ -77,7 +79,7 @@ export function DependencyGate({
         <header className="flex items-center gap-2 border-b border-neutral-800 px-5 py-3">
           <AlertTriangle className="h-4 w-4 shrink-0 text-amber-400" />
           <h2 className="text-sm font-semibold text-neutral-100">
-            {missing > 0 ? "Outils requis manquants" : "Configuration des outils"}
+            {missing > 0 ? t("dependencyGate.title.missing") : t("dependencyGate.title.setup")}
           </h2>
           <button
             onClick={onClose}
@@ -89,16 +91,17 @@ export function DependencyGate({
 
         <div className="overflow-auto px-5 py-4">
           <p className="mb-4 text-sm text-neutral-400">
-            gitui s'appuie sur ces outils en ligne de commande. Installe ceux qui manquent,
-            puis clique <strong className="text-indigo-300">Revérifier</strong>.
+            {t("dependencyGate.intro.before")}{" "}
+            <strong className="text-indigo-300">{t("dependencyGate.recheck")}</strong>
+            {t("dependencyGate.intro.after")}
           </p>
 
           <ul className="space-y-2.5">
-            {list.map((t) => {
-              const ok = !!t.version;
+            {list.map((tool) => {
+              const ok = !!tool.version;
               return (
                 <li
-                  key={t.name}
+                  key={tool.name}
                   className={`rounded-lg border px-3 py-2.5 ${
                     ok
                       ? "border-neutral-800 bg-neutral-900"
@@ -111,24 +114,24 @@ export function DependencyGate({
                     ) : (
                       <X className="h-4 w-4 shrink-0 text-amber-400" />
                     )}
-                    <span className="text-sm font-medium text-neutral-100">{t.name}</span>
+                    <span className="text-sm font-medium text-neutral-100">{tool.name}</span>
                     {ok ? (
                       <span className="ml-auto truncate font-mono text-[11px] text-emerald-400/90">
-                        {t.version}
+                        {tool.version}
                       </span>
                     ) : (
                       <button
-                        onClick={() => safeOpen(t.url)}
+                        onClick={() => safeOpen(tool.url)}
                         className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-md bg-indigo-600 px-2 py-1 text-[11px] font-medium text-white hover:bg-indigo-500"
                       >
-                        Installer <ExternalLink className="h-3 w-3" />
+                        {t("dependencyGate.install")} <ExternalLink className="h-3 w-3" />
                       </button>
                     )}
                   </div>
-                  <p className="mt-1 text-[11px] leading-relaxed text-neutral-500">{t.desc}</p>
+                  <p className="mt-1 text-[11px] leading-relaxed text-neutral-500">{tool.desc}</p>
                   {!ok && (
                     <code className="mt-1.5 block overflow-x-auto rounded bg-black/40 px-2 py-1 font-mono text-[11px] text-neutral-300">
-                      {t.install}
+                      {tool.install}
                     </code>
                   )}
                 </li>
@@ -137,9 +140,8 @@ export function DependencyGate({
           </ul>
 
           <p className="mt-3 text-[11px] leading-relaxed text-neutral-500">
-            <strong className="text-neutral-400">Claude Code</strong> (aides IA) est
-            vérifié au moment où tu lances une fonction IA — pas besoin de l'installer pour
-            le reste de l'app.
+            <strong className="text-neutral-400">Claude Code</strong>{" "}
+            {t("dependencyGate.claudeNote")}
           </p>
 
           {needsAuth && (
@@ -147,12 +149,11 @@ export function DependencyGate({
               <div className="flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4 shrink-0 text-amber-400" />
                 <span className="text-sm font-medium text-neutral-100">
-                  GitHub CLI non connecté
+                  {t("dependencyGate.auth.title")}
                 </span>
               </div>
               <p className="mt-1 text-[11px] leading-relaxed text-neutral-500">
-                Connecte-toi pour accéder aux PRs et issues. Lance cette commande dans un
-                terminal :
+                {t("dependencyGate.auth.hint")}
               </p>
               <code className="mt-1.5 block rounded bg-black/40 px-2 py-1 font-mono text-[11px] text-neutral-300">
                 gh auth login
@@ -164,8 +165,10 @@ export function DependencyGate({
         <footer className="flex items-center gap-2 border-t border-neutral-800 px-5 py-3">
           <span className="text-[11px] text-neutral-500">
             {missing === 0 && !needsAuth
-              ? "Tout est prêt ✨"
-              : `${missing > 0 ? `${missing} outil(s) manquant(s)` : "Connexion requise"}`}
+              ? t("dependencyGate.status.ready")
+              : missing > 0
+                ? t("dependencyGate.status.missing", { count: missing })
+                : t("dependencyGate.status.authRequired")}
           </span>
           <button
             onClick={recheck}
@@ -173,13 +176,13 @@ export function DependencyGate({
             className="ml-auto inline-flex items-center gap-1.5 rounded-md border border-neutral-700 px-2.5 py-1.5 text-xs font-medium text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${checking ? "animate-spin" : ""}`} />
-            Revérifier
+            {t("dependencyGate.recheck")}
           </button>
           <button
             onClick={onClose}
             className="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-500"
           >
-            Continuer
+            {t("dependencyGate.continue")}
           </button>
         </footer>
       </div>

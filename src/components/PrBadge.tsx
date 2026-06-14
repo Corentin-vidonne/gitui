@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { safeOpen } from "../lib/safeOpen";
 import type { PrInfo } from "../lib/types";
 
@@ -23,6 +24,7 @@ export function reviewMark(
 }
 
 export function PrBadge({ pr }: { pr: PrInfo }) {
+  const { t } = useTranslation();
   const style =
     STATE_STYLES[pr.state] ?? "border-neutral-700 bg-neutral-900 text-neutral-300";
   const rev = reviewMark(pr.reviewDecision);
@@ -31,7 +33,7 @@ export function PrBadge({ pr }: { pr: PrInfo }) {
       onClick={() => safeOpen(pr.url)}
       title={`${pr.state}${pr.reviewDecision ? " · " + pr.reviewDecision : ""}${
         pr.checks ? " · CI " + pr.checks : ""
-      } — open on GitHub`}
+      } — ${t("prBadge.openOnGitHub")}`}
       className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium hover:brightness-125 ${style}`}
     >
       {pr.checks && <span className={ciColor(pr.checks)}>●</span>}#{pr.number}

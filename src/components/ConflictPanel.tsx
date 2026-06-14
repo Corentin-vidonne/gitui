@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { AlertTriangle, Check, X, Sparkles, Loader2 } from "lucide-react";
 import type { ConflictState, ConflictSuggestion, RepoView } from "../lib/types";
 import { api, errorText } from "../lib/api";
@@ -23,6 +24,7 @@ export function ConflictPanel({
   onAbort: () => void;
   onResolved: (view: RepoView) => void;
 }) {
+  const { t } = useTranslation();
   const [suggestions, setSuggestions] = useState<Record<string, ConflictSuggestion>>({});
   const [loadingFile, setLoadingFile] = useState<string | null>(null);
   const [applyingFile, setApplyingFile] = useState<string | null>(null);
@@ -88,7 +90,7 @@ export function ConflictPanel({
           if (hasConflictMarkers(s.resolution)) {
             setErrors((m) => ({
               ...m,
-              [file]: "AI left conflict markers — resolve this one manually.",
+              [file]: t("conflictPanel.markersLeftError"),
             }));
             continue;
           }
@@ -116,26 +118,27 @@ export function ConflictPanel({
       <div className="flex items-center gap-2 text-amber-300">
         <AlertTriangle className="h-5 w-5 shrink-0" />
         <h3 className="text-sm font-semibold">
-          Restack paused — resolve conflicts
+          {t("conflictPanel.title")}
           {conflict.branch ? (
             <>
               {" "}
-              on <span className="font-mono">{conflict.branch}</span>
+              {t("conflictPanel.onBranch")}{" "}
+              <span className="font-mono">{conflict.branch}</span>
             </>
           ) : null}
         </h3>
       </div>
       <p className="mt-2 text-xs text-neutral-400">
-        Fix the conflicts in your editor and stage them (
-        <code className="rounded bg-neutral-800 px-1">git add</code>), then continue — or let
-        the AI propose a resolution per file.
+        {t("conflictPanel.description.before")}
+        <code className="rounded bg-neutral-800 px-1">git add</code>
+        {t("conflictPanel.description.after")}
       </p>
 
       {conflict.files.length > 1 && (
         <button
           onClick={resolveAll}
           disabled={resolvingAll || busy}
-          title="Suggest and apply a resolution for every conflicted file"
+          title={t("conflictPanel.resolveAll.title")}
           className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
         >
           {resolvingAll ? (
@@ -143,7 +146,9 @@ export function ConflictPanel({
           ) : (
             <Sparkles className="h-3.5 w-3.5" />
           )}
-          {resolvingAll ? "Resolving…" : `AI resolve all (${conflict.files.length})`}
+          {resolvingAll
+            ? t("conflictPanel.resolving")
+            : t("conflictPanel.resolveAll.label", { count: conflict.files.length })}
         </button>
       )}
 
@@ -162,7 +167,7 @@ export function ConflictPanel({
                   <button
                     onClick={() => suggest(f)}
                     disabled={loadingFile === f || resolvingAll}
-                    title="Ask the AI to resolve this file"
+                    title={t("conflictPanel.suggest.title")}
                     className="ml-auto inline-flex shrink-0 items-center gap-1.5 rounded-md border border-indigo-600 px-2 py-1 text-[11px] font-medium text-indigo-300 hover:bg-indigo-950/40 disabled:opacity-50"
                   >
                     {loadingFile === f ? (
@@ -170,7 +175,7 @@ export function ConflictPanel({
                     ) : (
                       <Sparkles className="h-3 w-3" />
                     )}
-                    {s ? "Retry" : "AI suggest"}
+                    {s ? t("conflictPanel.retry") : t("conflictPanel.suggest.label")}
                   </button>
                 </div>
 
@@ -187,7 +192,7 @@ export function ConflictPanel({
                     </p>
                     <details className="rounded border border-neutral-800 bg-neutral-950/60">
                       <summary className="cursor-pointer px-2 py-1 text-[11px] text-neutral-400">
-                        Preview resolved file
+                        {t("conflictPanel.previewResolved")}
                       </summary>
                       <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-words border-t border-neutral-800 p-2 font-mono text-[11px] text-neutral-300">
                         {s.resolution}
@@ -196,8 +201,7 @@ export function ConflictPanel({
                     {markers && (
                       <div className="flex items-center gap-1.5 text-[11px] text-amber-300">
                         <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-                        The proposal still contains conflict markers — review manually before
-                        applying.
+                        {t("conflictPanel.markersWarning")}
                       </div>
                     )}
                     <div className="flex gap-2">
@@ -206,8 +210,8 @@ export function ConflictPanel({
                         disabled={applyingFile === f || markers}
                         title={
                           markers
-                            ? "Resolution still has conflict markers"
-                            : "Write this resolution and stage the file"
+                            ? t("conflictPanel.apply.titleMarkers")
+                            : t("conflictPanel.apply.title")
                         }
                         className="inline-flex items-center gap-1.5 rounded-md bg-emerald-600 px-2.5 py-1 text-[11px] font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
                       >
@@ -216,13 +220,13 @@ export function ConflictPanel({
                         ) : (
                           <Check className="h-3 w-3" />
                         )}
-                        Apply
+                        {t("conflictPanel.apply.label")}
                       </button>
                       <button
                         onClick={() => dismiss(f)}
                         className="inline-flex items-center gap-1.5 rounded-md border border-neutral-700 px-2.5 py-1 text-[11px] text-neutral-300 hover:bg-neutral-800"
                       >
-                        <X className="h-3 w-3" /> Dismiss
+                        <X className="h-3 w-3" /> {t("conflictPanel.dismiss")}
                       </button>
                     </div>
                   </div>
@@ -239,14 +243,14 @@ export function ConflictPanel({
           disabled={busy}
           className="inline-flex items-center gap-1.5 rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
         >
-          <Check className="h-3.5 w-3.5" /> Continue restack
+          <Check className="h-3.5 w-3.5" /> {t("conflictPanel.continueRestack")}
         </button>
         <button
           onClick={onAbort}
           disabled={busy}
           className="inline-flex items-center gap-1.5 rounded-md border border-neutral-700 px-3 py-1.5 text-xs font-medium text-neutral-300 hover:bg-neutral-800 disabled:opacity-50"
         >
-          <X className="h-3.5 w-3.5" /> Abort
+          <X className="h-3.5 w-3.5" /> {t("conflictPanel.abort")}
         </button>
       </div>
     </div>

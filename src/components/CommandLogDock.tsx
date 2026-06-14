@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { listen } from "@tauri-apps/api/event";
+import { useTranslation } from "react-i18next";
 import { TerminalSquare, X, Trash2, Loader2 } from "lucide-react";
 
 /** Mirrors the Rust `cmdlog::CommandEvent` (camelCase over IPC). One command is emitted
@@ -90,6 +91,7 @@ function Row({ ev }: { ev: CommandEvent }) {
  * closed (the default) nothing is shown — the regular UX is untouched. Read-only polling
  * (`git status`, `gh pr list`, …) is filtered out on the Rust side. */
 export function CommandLogDock({ onClose }: { onClose: () => void }) {
+  const { t } = useTranslation();
   const [items, setItems] = useState<CommandEvent[]>([]);
   const [height, setHeight] = useState(260);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -164,22 +166,22 @@ export function CommandLogDock({ onClose }: { onClose: () => void }) {
       />
       <div className="flex h-9 shrink-0 items-center gap-2 px-3 text-xs text-neutral-300">
         <TerminalSquare className="h-3.5 w-3.5 shrink-0 text-indigo-400" />
-        <span className="font-medium">Journal des commandes</span>
+        <span className="font-medium">{t("commandLogDock.title")}</span>
         {items.length > 0 && <span className="font-mono text-neutral-600">{items.length}</span>}
         <span className="hidden truncate text-neutral-600 md:inline">
-          commandes git / gh exécutées par l'app
+          {t("commandLogDock.subtitle")}
         </span>
         <button
           onClick={() => setItems([])}
           disabled={items.length === 0}
-          title="Vider le journal"
+          title={t("commandLogDock.clear")}
           className="ml-auto rounded p-1 text-neutral-500 hover:bg-neutral-800 hover:text-neutral-200 disabled:opacity-30"
         >
           <Trash2 className="h-3.5 w-3.5" />
         </button>
         <button
           onClick={onClose}
-          title="Fermer"
+          title={t("common.close")}
           className="rounded p-1 text-neutral-500 hover:bg-neutral-800 hover:text-neutral-200"
         >
           <X className="h-4 w-4" />
@@ -192,8 +194,7 @@ export function CommandLogDock({ onClose }: { onClose: () => void }) {
       >
         {items.length === 0 ? (
           <div className="flex h-full items-center justify-center px-6 text-center font-sans text-xs text-neutral-600">
-            Aucune commande pour l'instant. Lance une action (restack, sync, submit…) — les
-            commandes git/gh exécutées apparaîtront ici.
+            {t("commandLogDock.empty")}
           </div>
         ) : (
           items.map((it) => <Row key={it.id} ev={it} />)

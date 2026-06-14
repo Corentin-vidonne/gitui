@@ -5,6 +5,7 @@ import "@xterm/xterm/css/xterm.css";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { Sparkles, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { errorText } from "../lib/api";
 import { useThemePalette } from "../lib/theme";
 
@@ -41,6 +42,7 @@ export function TerminalDock({
   aiName: string;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const hostRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<Terminal | null>(null);
   const [height, setHeight] = useState(360);
@@ -110,7 +112,8 @@ export function TerminalDock({
         if (e.payload.id === id) term.write(decodeBase64(e.payload.data));
       });
       const offExit = await listen<string>("term-exit", (e) => {
-        if (e.payload === id) term.write("\r\n\x1b[90m[session ended]\x1b[0m\r\n");
+        if (e.payload === id)
+          term.write(`\r\n\x1b[90m[${t("terminalDock.sessionEnded")}]\x1b[0m\r\n`);
       });
       unlisteners.push(offOut, offExit);
       if (!alive) {
@@ -193,7 +196,7 @@ export function TerminalDock({
       ? `PR #${target.number} · ${mode}`
       : target.kind === "merge-branches"
       ? `merge ${target.source} → ${target.target}`
-      : "dépôt";
+      : t("terminalDock.repo");
 
   return (
     <div

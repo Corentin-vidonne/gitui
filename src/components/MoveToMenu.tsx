@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Move, Check, FolderPlus } from "lucide-react";
 import type { RepoGroup } from "../lib/groups";
 
@@ -19,6 +20,7 @@ export function MoveToMenu({
   onAssign: (groupId: string | null) => void;
   onCreateGroup: () => void;
 }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -36,7 +38,7 @@ export function MoveToMenu({
   return (
     <div ref={ref} className="relative flex">
       <button
-        title="Move to group"
+        title={t("moveToMenu.moveToGroup")}
         onClick={(e) => {
           e.stopPropagation();
           setOpen((o) => !o);
@@ -63,7 +65,7 @@ export function MoveToMenu({
             <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center">
               {currentGroupId === null && <Check className="h-3 w-3 text-indigo-400" />}
             </span>
-            <span className="truncate text-neutral-300">Ungrouped</span>
+            <span className="truncate text-neutral-300">{t("moveToMenu.ungrouped")}</span>
           </button>
 
           {groups.map((g) => (
@@ -91,7 +93,7 @@ export function MoveToMenu({
             className={`${item} text-indigo-300`}
           >
             <FolderPlus className="h-3.5 w-3.5 shrink-0" />
-            New group…
+            {t("moveToMenu.newGroup")}
           </button>
         </div>
       )}
