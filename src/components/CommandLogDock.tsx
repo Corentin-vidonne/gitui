@@ -168,7 +168,7 @@ export function CommandLogDock({ onClose }: { onClose: () => void }) {
         <TerminalSquare className="h-3.5 w-3.5 shrink-0 text-indigo-400" />
         <span className="font-medium">{t("commandLogDock.title")}</span>
         {items.length > 0 && <span className="font-mono text-neutral-600">{items.length}</span>}
-        <span className="hidden truncate text-neutral-600 md:inline">
+        <span className="hidden min-w-0 truncate text-neutral-600 md:inline">
           {t("commandLogDock.subtitle")}
         </span>
         <button

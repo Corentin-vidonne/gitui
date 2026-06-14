@@ -20,9 +20,9 @@ export function CommitNodeCard({ data }: NodeProps) {
         position={Position.Top}
         className="!h-1.5 !w-1.5 !border-0 !bg-neutral-700"
       />
-      <div className="flex items-center gap-2">
-        <span className="font-mono text-[11px] text-amber-300/90">{node.shortSha}</span>
-        <span className="truncate text-xs text-neutral-200">{node.subject}</span>
+      <div className="flex min-w-0 items-center gap-2">
+        <span className="shrink-0 font-mono text-[11px] text-amber-300/90">{node.shortSha}</span>
+        <span className="min-w-0 truncate text-xs text-neutral-200">{node.subject}</span>
       </div>
       {node.refs.length > 0 && (
         <div className="mt-1 flex flex-wrap gap-1">

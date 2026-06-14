@@ -543,11 +543,11 @@ export function BranchDetail({
             {t("branchDetail.pr.heading")}
           </h4>
           {branch.pr ? (
-            <div className="flex items-center gap-2 rounded-md border border-neutral-700 px-3 py-2">
+            <div className="flex flex-wrap items-center gap-2 rounded-md border border-neutral-700 px-3 py-2">
               <button
                 onClick={() => branch.pr && onOpenPr?.(branch.pr.number)}
                 title={t("branchDetail.pr.viewDetails")}
-                className="flex flex-1 items-center gap-2 text-left"
+                className="flex min-w-0 flex-1 items-center gap-2 text-left"
               >
                 <span className="font-mono text-xs text-neutral-200">#{branch.pr.number}</span>
                 <span className="text-xs text-neutral-400">{branch.pr.state}</span>

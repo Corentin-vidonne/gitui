@@ -85,7 +85,7 @@ export function WhatsNewDialog() {
             <X className="h-4 w-4" />
           </button>
         </div>
-        <div className="overflow-auto px-4 py-3 text-sm leading-relaxed text-neutral-200 [&_a]:text-indigo-400 [&_code]:rounded [&_code]:bg-neutral-800 [&_code]:px-1 [&_h1]:mb-1 [&_h1]:mt-3 [&_h1]:text-base [&_h1]:font-semibold [&_h1]:text-neutral-100 [&_h2]:mb-1 [&_h2]:mt-3 [&_h2]:text-sm [&_h2]:font-semibold [&_h2]:text-neutral-100 [&_h3]:mb-1 [&_h3]:mt-2 [&_h3]:font-semibold [&_h3]:text-neutral-100 [&_li]:my-0.5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:my-1.5 [&_strong]:text-neutral-100 [&_ul]:list-disc [&_ul]:pl-5">
+        <div className="overflow-auto px-4 py-3 text-sm leading-relaxed text-neutral-200 break-words [&_a]:text-indigo-400 [&_code]:rounded [&_code]:bg-neutral-800 [&_code]:px-1 [&_pre]:overflow-x-auto [&_pre]:rounded [&_pre]:bg-neutral-800 [&_pre]:p-2 [&_pre]:text-xs [&_h1]:mb-1 [&_h1]:mt-3 [&_h1]:text-base [&_h1]:font-semibold [&_h1]:text-neutral-100 [&_h2]:mb-1 [&_h2]:mt-3 [&_h2]:text-sm [&_h2]:font-semibold [&_h2]:text-neutral-100 [&_h3]:mb-1 [&_h3]:mt-2 [&_h3]:font-semibold [&_h3]:text-neutral-100 [&_li]:my-0.5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:my-1.5 [&_strong]:text-neutral-100 [&_ul]:list-disc [&_ul]:pl-5">
           <Markdown>{notes}</Markdown>
         </div>
         <div className="flex justify-end border-t border-neutral-800 px-4 py-3">

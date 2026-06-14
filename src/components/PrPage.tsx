@@ -245,7 +245,7 @@ export function PrPage({
     <div className="flex h-full w-full min-w-0 flex-col bg-neutral-950">
       {/* Header */}
       <div className="shrink-0 border-b border-neutral-800 px-4 pt-2">
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 items-center gap-2">
           <button
             onClick={onClose}
             title={t("prPage.header.backTitle")}
@@ -254,9 +254,9 @@ export function PrPage({
             <ArrowLeft className="h-4 w-4" />
           </button>
           <GitPullRequest className="h-4 w-4 shrink-0 text-indigo-400" />
-          <span className="font-mono text-sm text-neutral-100">#{number}</span>
+          <span className="shrink-0 font-mono text-sm text-neutral-100">#{number}</span>
           {pr && <span className={`shrink-0 text-xs ${stateColor(pr.state)}`}>{pr.state}</span>}
-          <span className="truncate text-sm text-neutral-200">{pr?.title ?? ""}</span>
+          <span className="min-w-0 truncate text-sm text-neutral-200">{pr?.title ?? ""}</span>
           {pr && (
             <button
               onClick={() => safeOpen(pr.url)}

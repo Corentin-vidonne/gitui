@@ -549,7 +549,7 @@ function SplitDiff({
 }) {
   const split = useMemo(() => toSplitRows(rows), [rows]);
   return (
-    <div className="rounded-md border border-neutral-800 bg-neutral-950 font-mono text-[11px] leading-relaxed">
+    <div className="min-w-[560px] rounded-md border border-neutral-800 bg-neutral-950 font-mono text-[11px] leading-relaxed">
       {split.map((r, i) => {
         const rowEl =
           r.full != null ? (
@@ -733,7 +733,7 @@ export function DiffExplorer({
         </div>
       )}
       <div className="flex min-h-0 flex-1">
-        <aside className="w-64 shrink-0 overflow-auto border-r border-neutral-800 py-2">
+        <aside className="w-48 shrink-0 overflow-auto border-r border-neutral-800 py-2 md:w-56 lg:w-64">
         <div className="px-3 pb-2 text-[10px] uppercase tracking-wider text-neutral-500">
           {t("diffExplorer.fileCount", { count: files.length })}
         </div>
@@ -770,7 +770,9 @@ export function DiffExplorer({
             )}
             {chunk.trim() ? (
               view === "split" ? (
-                <SplitDiff rows={rows} byLine={byLine} />
+                <div className="overflow-x-auto">
+                  <SplitDiff rows={rows} byLine={byLine} />
+                </div>
               ) : (
                 <NumberedDiff rows={rows} byLine={byLine} />
               )

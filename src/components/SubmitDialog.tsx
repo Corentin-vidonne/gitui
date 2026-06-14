@@ -100,10 +100,10 @@ export function SubmitDialog({
           <div className="max-h-72 space-y-2 overflow-auto">
             {steps.map((s) => (
               <div key={s.branch} className="rounded-md border border-neutral-800 p-2">
-                <div className="flex items-center gap-2 text-xs">
-                  <span className="font-mono text-neutral-200">{s.branch}</span>
-                  <span className="text-neutral-500">→ {s.base}</span>
-                  <span className={`ml-auto rounded px-1.5 py-0.5 text-[10px] ${badge(s.action)}`}>
+                <div className="flex min-w-0 items-center gap-2 text-xs">
+                  <span className="truncate font-mono text-neutral-200">{s.branch}</span>
+                  <span className="shrink-0 text-neutral-500">→ {s.base}</span>
+                  <span className={`ml-auto shrink-0 whitespace-nowrap rounded px-1.5 py-0.5 text-[10px] ${badge(s.action)}`}>
                     {s.action === "create"
                       ? t("submitDialog.badge.newPr")
                       : s.action === "update"

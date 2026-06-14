@@ -111,15 +111,15 @@ export function StashModal({
                 key={s.refName}
                 className="rounded-lg border border-neutral-800 bg-neutral-950/60 p-2.5"
               >
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-xs text-neutral-300">{s.refName}</span>
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="shrink-0 font-mono text-xs text-neutral-300">{s.refName}</span>
                   {s.branch && (
-                    <span className="rounded bg-neutral-800 px-1.5 py-0.5 text-[10px] text-neutral-400">
+                    <span className="min-w-0 truncate rounded bg-neutral-800 px-1.5 py-0.5 text-[10px] text-neutral-400">
                       {s.branch}
                     </span>
                   )}
-                  <span className="text-[10px] text-neutral-600">{s.date}</span>
-                  <span className="ml-auto flex items-center gap-1">
+                  <span className="shrink-0 text-[10px] text-neutral-600">{s.date}</span>
+                  <span className="ml-auto flex shrink-0 items-center gap-1">
                     <button
                       onClick={() => op(api.stashApply(repoPath, s.refName))}
                       disabled={busy}

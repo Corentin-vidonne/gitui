@@ -74,7 +74,7 @@ export function IssuesList({
               <button
                 key={i.number}
                 onClick={() => onSelect(i.number)}
-                className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left ${
+                className={`flex w-full min-w-0 items-center gap-2 rounded-md px-3 py-2 text-left ${
                   selected === i.number
                     ? "bg-indigo-950/50 ring-1 ring-indigo-700/60"
                     : "hover:bg-neutral-900"
@@ -85,7 +85,7 @@ export function IssuesList({
                 ) : (
                   <CircleCheck className="h-4 w-4 shrink-0 text-purple-400" />
                 )}
-                <span className="truncate text-sm text-neutral-200">{i.title}</span>
+                <span className="min-w-0 truncate text-sm text-neutral-200">{i.title}</span>
                 {i.labels.slice(0, 3).map((l) => (
                   <span
                     key={l}

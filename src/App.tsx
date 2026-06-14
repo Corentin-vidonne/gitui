@@ -941,8 +941,8 @@ export default function App() {
       {/* Main */}
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <header
-          className={`flex shrink-0 items-center gap-3 border-b border-neutral-800 px-6 ${
-            isModern ? "h-16" : "h-14"
+          className={`flex shrink-0 items-center gap-3 border-b border-neutral-800 px-6 py-2 ${
+            isModern ? "min-h-16" : "min-h-14"
           }`}
         >
           {workspace ? (
@@ -976,29 +976,33 @@ export default function App() {
             </>
           ) : view ? (
             <>
-              <h1
-                className={
-                  isModern
-                    ? "text-[15px] font-semibold tracking-tight text-neutral-100"
-                    : "text-sm font-medium text-neutral-200"
-                }
-              >
-                {view.name}
-              </h1>
-              <span
-                className={
-                  isModern
-                    ? "inline-flex items-center gap-1.5 rounded-full border border-neutral-700/70 bg-neutral-900/60 px-2.5 py-0.5 font-mono text-[11px] text-neutral-400"
-                    : "rounded bg-neutral-800 px-2 py-0.5 font-mono text-xs text-neutral-400"
-                }
-              >
-                {isModern && <GitBranch className="h-3 w-3 text-indigo-400" />}
-                {t("app.header.trunk", { trunk: view.trunk })}
-              </span>
-              {!view.prsAvailable && (
-                <span className="text-xs text-neutral-600">{t("app.header.prsUnavailable")}</span>
-              )}
-              <div className="ml-auto flex items-center gap-2">
+              <div className="flex min-w-0 items-center gap-3">
+                <h1
+                  className={
+                    isModern
+                      ? "truncate text-[15px] font-semibold tracking-tight text-neutral-100"
+                      : "truncate text-sm font-medium text-neutral-200"
+                  }
+                >
+                  {view.name}
+                </h1>
+                <span
+                  className={
+                    isModern
+                      ? "inline-flex shrink-0 items-center gap-1.5 rounded-full border border-neutral-700/70 bg-neutral-900/60 px-2.5 py-0.5 font-mono text-[11px] text-neutral-400"
+                      : "shrink-0 rounded bg-neutral-800 px-2 py-0.5 font-mono text-xs text-neutral-400"
+                  }
+                >
+                  {isModern && <GitBranch className="h-3 w-3 text-indigo-400" />}
+                  {t("app.header.trunk", { trunk: view.trunk })}
+                </span>
+                {!view.prsAvailable && (
+                  <span className="hidden shrink-0 text-xs text-neutral-600 lg:inline">
+                    {t("app.header.prsUnavailable")}
+                  </span>
+                )}
+              </div>
+              <div className="ml-auto flex flex-wrap items-center justify-end gap-1.5">
                 <button
                   onClick={() => checkAllUpdates()}
                   title={
@@ -1088,9 +1092,11 @@ export default function App() {
                   onClick={() =>
                     setDialog({ type: "new", parent: view.currentBranch ?? view.trunk })
                   }
-                  className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-indigo-500"
+                  title={t("app.header.newBranch")}
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-indigo-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-indigo-500"
                 >
-                  <Plus className="h-3.5 w-3.5" /> {t("app.header.newBranch")}
+                  <Plus className="h-3.5 w-3.5" />
+                  <span className="hidden lg:inline">{t("app.header.newBranch")}</span>
                 </button>
                 <button
                   data-tour="submit"
@@ -1101,9 +1107,10 @@ export default function App() {
                       ? t("app.header.submitTitle")
                       : t("app.header.submitUnavailable")
                   }
-                  className="inline-flex items-center gap-1.5 rounded-md bg-emerald-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-emerald-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
                 >
-                  <GitPullRequest className="h-3.5 w-3.5" /> Submit
+                  <GitPullRequest className="h-3.5 w-3.5" />
+                  <span className="hidden lg:inline">Submit</span>
                 </button>
                 <button
                   data-tour="claude"
@@ -1319,7 +1326,7 @@ export default function App() {
                           value={commitSearch}
                           onChange={(e) => setCommitSearch(e.target.value)}
                           placeholder={t("app.commits.searchPlaceholder")}
-                          className="w-56 rounded-md border border-neutral-700 bg-neutral-900/90 px-2.5 py-1.5 text-xs text-neutral-100 shadow-sm outline-none focus:border-indigo-600"
+                          className="w-40 rounded-md border border-neutral-700 bg-neutral-900/90 px-2.5 py-1.5 text-xs text-neutral-100 shadow-sm outline-none focus:border-indigo-600 lg:w-56"
                         />
                       </div>
                       <CommitGraph
@@ -1370,7 +1377,10 @@ export default function App() {
                     title={t("app.panel.dragToResize")}
                     className="w-1 shrink-0 cursor-col-resize bg-neutral-800 transition-colors hover:bg-indigo-600"
                   />
-                  <div style={{ width: panelWidth }} className="flex min-w-0 shrink-0">
+                  <div
+                    style={{ width: panelWidth }}
+                    className="flex min-w-0 max-w-[60%] shrink-0"
+                  >
                     {panel}
                   </div>
                 </>

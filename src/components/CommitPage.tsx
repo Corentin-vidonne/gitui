@@ -90,7 +90,7 @@ export function CommitPage({
     <div className="flex h-full w-full min-w-0 flex-col bg-neutral-950">
       {/* Header */}
       <div className="shrink-0 border-b border-neutral-800 px-4 py-2">
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 items-center gap-2">
           <button
             onClick={onClose}
             title={t("commitPage.backToGraph")}
@@ -99,7 +99,7 @@ export function CommitPage({
             <ArrowLeft className="h-4 w-4" />
           </button>
           <span className="font-mono text-sm text-amber-300">{node.shortSha}</span>
-          <span className="truncate text-sm text-neutral-200">{node.subject}</span>
+          <span className="min-w-0 truncate text-sm text-neutral-200">{node.subject}</span>
           <span className="ml-auto shrink-0 text-xs text-neutral-500">
             {node.author} · {node.date}
           </span>
@@ -140,7 +140,7 @@ export function CommitPage({
                 <select
                   value={cpTarget || cpBranches[0]}
                   onChange={(e) => setCpTarget(e.target.value)}
-                  className="max-w-[11rem] rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1 text-xs text-neutral-100 outline-none focus:border-indigo-600"
+                  className="min-w-0 max-w-[11rem] rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1 text-xs text-neutral-100 outline-none focus:border-indigo-600"
                 >
                   {cpBranches.map((b) => (
                     <option key={b} value={b}>

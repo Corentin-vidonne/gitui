@@ -130,7 +130,7 @@ export function DependencyGate({
                   </div>
                   <p className="mt-1 text-[11px] leading-relaxed text-neutral-500">{tool.desc}</p>
                   {!ok && (
-                    <code className="mt-1.5 block overflow-x-auto rounded bg-black/40 px-2 py-1 font-mono text-[11px] text-neutral-300">
+                    <code className="mt-1.5 block overflow-x-auto whitespace-nowrap rounded bg-black/40 px-2 py-1 font-mono text-[11px] text-neutral-300">
                       {tool.install}
                     </code>
                   )}

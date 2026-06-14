@@ -53,7 +53,7 @@ export function BranchRow({
   return (
     <div
       onClick={() => onSelect?.(branch)}
-      className={`group flex items-center gap-2 rounded-md px-2 py-1.5 ${
+      className={`group flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5 ${
         onSelect ? "cursor-pointer" : ""
       } ${
         isSelected
@@ -69,24 +69,24 @@ export function BranchRow({
         }`}
       />
       <span
-        className={`font-mono text-sm ${
+        className={`min-w-0 truncate font-mono text-sm ${
           branch.isCurrent ? "text-indigo-200" : "text-neutral-200"
         }`}
       >
         {branch.name}
       </span>
       {branch.isCurrent && (
-        <span className="rounded bg-indigo-900/70 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-300">
+        <span className="shrink-0 rounded bg-indigo-900/70 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-300">
           HEAD
         </span>
       )}
       {branch.dirty && (
-        <span title={t("branchRow.uncommitted.title")} className="text-[10px] text-rose-400">
+        <span title={t("branchRow.uncommitted.title")} className="shrink-0 whitespace-nowrap text-[10px] text-rose-400">
           ● {t("branchRow.uncommitted.label")}
         </span>
       )}
 
-      <div className="ml-auto flex items-center gap-2">
+      <div className="ml-auto flex shrink-0 items-center gap-2">
         {onAction && (
           <div className="hidden items-center gap-0.5 group-hover:flex">
             {!branch.isCurrent && (

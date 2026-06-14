@@ -81,7 +81,7 @@ export function DocsView({
   return (
     <div className="flex h-full">
       {/* File list */}
-      <div className="flex w-64 shrink-0 flex-col border-r border-neutral-800">
+      <div className="flex w-48 shrink-0 flex-col border-r border-neutral-800 lg:w-64">
         <div className="flex items-center justify-between px-3 py-2">
           <span className="text-xs uppercase tracking-wider text-neutral-500">
             Markdown
@@ -130,7 +130,7 @@ export function DocsView({
 
         {mode === "new" ? (
           <div className="flex min-h-0 flex-1 flex-col gap-3 p-4">
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
               <input
                 value={newPath}
                 onChange={(e) => setNewPath(e.target.value)}
@@ -141,7 +141,7 @@ export function DocsView({
                 value={newBranch}
                 onChange={(e) => setNewBranch(e.target.value)}
                 title={t("docsView.commitOnBranch")}
-                className="rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-sm text-neutral-100 outline-none focus:border-indigo-600"
+                className="min-w-0 max-w-[12rem] rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-sm text-neutral-100 outline-none focus:border-indigo-600"
               >
                 {branches.map((b) => (
                   <option key={b} value={b}>
@@ -163,7 +163,7 @@ export function DocsView({
                 {t("common.cancel")}
               </button>
             </div>
-            <div className="grid min-h-0 flex-1 grid-cols-2 gap-3">
+            <div className="grid min-h-0 flex-1 grid-cols-1 grid-rows-2 gap-3 lg:grid-cols-2 lg:grid-rows-1">
               <textarea
                 value={newContent}
                 onChange={(e) => setNewContent(e.target.value)}

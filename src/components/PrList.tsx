@@ -83,7 +83,7 @@ export function PrList({
             <button
               key={p.number}
               onClick={() => onSelect(p.number)}
-              className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left ${
+              className={`flex w-full min-w-0 items-center gap-2 rounded-md px-3 py-2 text-left ${
                 selected === p.number
                   ? "bg-indigo-950/50 ring-1 ring-indigo-700/60"
                   : "hover:bg-neutral-900"
@@ -94,7 +94,7 @@ export function PrList({
               ) : (
                 <GitPullRequest className={`h-4 w-4 shrink-0 ${stateColor(p.state)}`} />
               )}
-              <span className="truncate text-sm text-neutral-200">{p.title}</span>
+              <span className="min-w-0 truncate text-sm text-neutral-200">{p.title}</span>
               {p.isDraft && (
                 <span className="shrink-0 rounded-full border border-neutral-700 px-1.5 text-[10px] text-neutral-400">
                   {t("prList.draft")}

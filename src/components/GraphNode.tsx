@@ -38,13 +38,13 @@ export function GraphNode({ data }: NodeProps) {
         position={Position.Top}
         className="!h-1.5 !w-1.5 !border-0 !bg-neutral-700"
       />
-      <div className="flex items-center gap-1.5">
+      <div className="flex min-w-0 items-center gap-1.5">
         <GitBranch
           className={`h-3.5 w-3.5 shrink-0 ${b.isTrunk ? "text-amber-400" : "text-neutral-500"}`}
         />
-        <span className="truncate font-mono text-xs text-neutral-100">{b.name}</span>
+        <span className="min-w-0 truncate font-mono text-xs text-neutral-100">{b.name}</span>
         {b.isCurrent && (
-          <span className="ml-auto rounded bg-indigo-900/70 px-1 text-[9px] font-semibold uppercase text-indigo-300">
+          <span className="ml-auto shrink-0 rounded bg-indigo-900/70 px-1 text-[9px] font-semibold uppercase text-indigo-300">
             HEAD
           </span>
         )}

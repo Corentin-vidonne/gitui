@@ -42,9 +42,9 @@ export function IssueDetailPanel({
         ) : (
           <CircleCheck className="h-4 w-4 text-purple-400" />
         )}
-        <span className="font-mono text-sm text-neutral-100">#{number}</span>
+        <span className="shrink-0 font-mono text-sm text-neutral-100">#{number}</span>
         {issue && (
-          <span className={`text-xs ${open ? "text-emerald-300" : "text-purple-300"}`}>
+          <span className={`min-w-0 truncate text-xs ${open ? "text-emerald-300" : "text-purple-300"}`}>
             {issue.state}
           </span>
         )}
