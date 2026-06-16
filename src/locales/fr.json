@@ -1,4 +1,10 @@
 {
+  "titleBar": {
+    "minimize": "Réduire",
+    "maximize": "Agrandir",
+    "restore": "Restaurer",
+    "close": "Fermer"
+  },
   "addRepoDialog": {
     "title": "Ajouter un dépôt",
     "pickOpenTitle": "Sélectionner un dépôt git existant",

@@ -1,4 +1,10 @@
 {
+  "titleBar": {
+    "minimize": "Minimieren",
+    "maximize": "Maximieren",
+    "restore": "Wiederherstellen",
+    "close": "Schließen"
+  },
   "addRepoDialog": {
     "title": "Repository hinzufügen",
     "pickOpenTitle": "Vorhandenes git-Repository auswählen",

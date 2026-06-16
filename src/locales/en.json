@@ -1,4 +1,10 @@
 {
+  "titleBar": {
+    "minimize": "Minimize",
+    "maximize": "Maximize",
+    "restore": "Restore",
+    "close": "Close"
+  },
   "addRepoDialog": {
     "title": "Add repository",
     "pickOpenTitle": "Select an existing git repository",

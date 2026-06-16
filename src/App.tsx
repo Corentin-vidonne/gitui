@@ -44,6 +44,7 @@ import type {
   StackNode,
   UpdateItem,
 } from "./lib/types";
+import { TitleBar } from "./components/TitleBar";
 import { StackTree } from "./components/StackTree";
 import { StackGraph } from "./components/StackGraph";
 import { CommitGraph } from "./components/CommitGraph";
@@ -803,7 +804,9 @@ export default function App() {
   );
 
   return (
-    <div className="flex h-screen w-screen bg-neutral-950 text-neutral-200">
+    <div className="flex h-screen w-screen flex-col bg-neutral-950 text-neutral-200">
+      <TitleBar />
+      <div className="flex min-h-0 flex-1">
       {/* Sidebar */}
       <aside className="flex w-64 shrink-0 flex-col border-r border-neutral-800 bg-neutral-900/40">
         {isModern ? (
@@ -1411,6 +1414,7 @@ export default function App() {
 
         {showCmdLog && <CommandLogDock onClose={() => setShowCmdLog(false)} />}
       </main>
+      </div>
 
       {dialog?.type === "new" && view && (
         <NewBranchDialog
