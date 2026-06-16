@@ -879,6 +879,7 @@
     },
     "ai": {
       "model": "Model",
+      "customModel": "Custom…",
       "chatStreaming": "Progressive response (typewriter effect)",
       "assistantUi": {
         "label": "Assistant interface (Summary / Detailed)",
@@ -902,6 +903,7 @@
       },
       "ollama": {
         "host": "Ollama host",
+        "choose": "— choose a model —",
         "detect": "Detect",
         "detected": "{{count}} model(s) detected.",
         "noModels": "No model — `ollama pull qwen3-coder` (local) or `ollama launch claude` (cloud).",
