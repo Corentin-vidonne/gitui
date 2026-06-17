@@ -1,4 +1,5 @@
 import {
+  Fragment,
   useEffect,
   useRef,
   useState,
@@ -13,6 +14,7 @@ import {
   Terminal as TerminalIcon,
   Plus,
   ChevronDown,
+  SplitSquareHorizontal,
   X,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -34,25 +36,31 @@ function newId(): string {
     : `sh-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
 }
 
-/** One open terminal tab: a live PTY session + its working dir / shell profile. */
-type Tab = { id: string; title: string; shellId: string; cwd: string | null };
+/** One live PTY session: its shell profile, working dir, and flex weight within its group. */
+type Pane = { id: string; shellId: string; cwd: string | null; weight: number };
+/** A tab = a group of one or more panes laid out side by side (VS Code "split terminal"). */
+type Tab = { id: string; title: string; panes: Pane[] };
+
+/** Minimum share of a split group's width a single pane may shrink to while dragging. */
+const MIN_WEIGHT_FRACTION = 0.12;
 
 /**
- * A single xterm-backed shell session. Mounted ONCE per tab and kept alive while the dock
- * is open (it's only `hidden` when its tab is inactive), so switching tabs preserves
- * scrollback and the running process. Mirrors `TerminalDock`'s PTY wiring, but spawns a
- * plain shell (`term_open_shell`) instead of `claude`.
+ * A single xterm-backed shell session. Mounted ONCE per pane and kept alive for the whole
+ * lifetime of the dock (it is never remounted — only its group/dock get `display:none`), so
+ * sessions survive tab switches, splits, repo switches, and show/hide toggles. Spawns a plain
+ * shell via `term_open_shell` (mirrors `TerminalDock`'s PTY wiring).
  */
 function TerminalPane({
-  tab,
-  active,
-  dockVisible,
+  pane,
+  visible,
+  focused,
   palette,
 }: {
-  tab: Tab;
-  active: boolean;
-  /** Whether the whole dock is currently shown (vs hidden but kept mounted). */
-  dockVisible: boolean;
+  pane: Pane;
+  /** Whether this pane is currently displayed (its group is the active tab AND the dock is shown). */
+  visible: boolean;
+  /** Whether this is the focused pane of its group (gets keyboard focus + the focus ring). */
+  focused: boolean;
   palette: ThemePalette;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -74,9 +82,9 @@ function TerminalPane({
     }
   }, [palette]);
 
-  // Create the terminal + PTY session exactly once for this tab.
+  // Create the terminal + PTY session exactly once for this pane.
   useEffect(() => {
-    const id = tab.id;
+    const id = pane.id;
     const p = paletteRef.current;
     const term = new Terminal({
       fontSize: 12,
@@ -132,13 +140,13 @@ function TerminalPane({
       }
       opened = invoke("term_open_shell", {
         id,
-        cwd: tab.cwd,
-        shell: tab.shellId || null,
+        cwd: pane.cwd,
+        shell: pane.shellId || null,
         cols: term.cols,
         rows: term.rows,
       }).catch((err) => term.write(`\r\n\x1b[31m${errorText(err)}\x1b[0m\r\n`));
       await opened;
-      if (alive && active) term.focus();
+      if (alive && focused) term.focus();
     })();
 
     const ro = new ResizeObserver(() => {
@@ -159,15 +167,14 @@ function TerminalPane({
       termRef.current = null;
       fitRef.current = null;
     };
-    // Mount once: a tab's identity (id/cwd/shell) never changes after creation.
+    // Mount once: a pane's identity (id/cwd/shell) never changes after creation.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // When this tab becomes the visible one — its tab is selected AND the dock is shown — it
-  // transitions from `display:none` to visible, so re-fit (its host now has real dimensions)
-  // and focus it for typing. Depending on `dockVisible` also refits after the dock is reshown.
+  // When the pane becomes visible (its group activates / the dock is reshown) re-fit — its
+  // host now has real dimensions — and focus it if it's the group's focused pane.
   useEffect(() => {
-    if (!active || !dockVisible) return;
+    if (!visible) return;
     const term = termRef.current;
     const fit = fitRef.current;
     if (!term || !fit) return;
@@ -177,27 +184,22 @@ function TerminalPane({
       } catch {
         /* ignore */
       }
-      invoke("term_resize", { id: tab.id, cols: term.cols, rows: term.rows }).catch(() => {});
-      term.focus();
+      invoke("term_resize", { id: pane.id, cols: term.cols, rows: term.rows }).catch(() => {});
+      if (focused) term.focus();
     });
     return () => cancelAnimationFrame(raf);
-  }, [active, dockVisible, tab.id]);
+  }, [visible, focused, pane.id]);
 
-  return (
-    <div
-      ref={hostRef}
-      className={`absolute inset-0 px-2 pb-2 ${active ? "" : "hidden"}`}
-    />
-  );
+  return <div ref={hostRef} className="absolute inset-0 px-1 pb-1" />;
 }
 
 /**
- * The integrated terminal: a resizable bottom dock hosting one or more shell tabs. New tabs
- * open the configured default shell (the "＋" button) or a chosen profile (the "⌄" menu),
- * VS Code-style. Sessions stay alive across tab switches AND across repo switches / show-hide
- * toggles — the parent keeps this mounted and flips `visible`, so hiding the dock only sets
- * `display:none` (the shells keep running). Only closing the last tab tears it down
- * (`onClosed`). Styled to match the app (theme-aware xterm colors, neutral chrome, indigo).
+ * The integrated terminal: a resizable bottom dock of shell tabs. Each tab is a GROUP that
+ * can hold several panes side by side ("Split" — the ⊟ button), with draggable separators.
+ * New tabs open the default shell (＋) or a chosen profile (⌄ menu); a split mirrors the
+ * focused pane's profile. Every session stays alive across tab switches, splits, repo
+ * switches and show/hide toggles — the parent keeps this mounted and flips `visible`, so
+ * hiding only sets `display:none`. Only closing the last pane tears the dock down (`onClosed`).
  */
 export function IntegratedTerminalDock({
   repoPath,
@@ -206,7 +208,7 @@ export function IntegratedTerminalDock({
   onHide,
   onClosed,
 }: {
-  /** Working directory for newly opened tabs (the active repo, or null → home). */
+  /** Working directory for newly opened panes (the active repo, or null → home). */
   repoPath: string | null;
   /** Default shell profile id (from Settings); "" = system default. */
   defaultShell: string;
@@ -214,7 +216,7 @@ export function IntegratedTerminalDock({
   visible: boolean;
   /** Hide the dock (X button) — sessions keep running. */
   onHide: () => void;
-  /** The last tab was closed — fully tear the dock down. */
+  /** The last pane was closed — fully tear the dock down. */
   onClosed: () => void;
 }) {
   const { t } = useTranslation();
@@ -222,59 +224,150 @@ export function IntegratedTerminalDock({
   const [height, setHeight] = useState(320);
   const [shells, setShells] = useState<ShellProfile[]>([]);
   const [tabs, setTabs] = useState<Tab[]>([]);
-  const [activeId, setActiveId] = useState<string | null>(null);
+  const [activeTabId, setActiveTabId] = useState<string | null>(null);
+  const [focusedPaneId, setFocusedPaneId] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
 
-  // A title for a new tab: the profile label, suffixed " (n)" when it repeats.
-  function makeTab(profile: ShellProfile | undefined, existing: Tab[]): Tab {
-    const label = profile?.label ?? "Terminal";
-    const same = existing.filter(
-      (x) => x.title.replace(/ \(\d+\)$/, "") === label
-    ).length;
-    return {
-      id: newId(),
-      title: same === 0 ? label : `${label} (${same + 1})`,
-      shellId: profile?.id ?? "",
-      cwd: repoPath,
-    };
+  function newPane(profile: ShellProfile | undefined): Pane {
+    return { id: newId(), shellId: profile?.id ?? "", cwd: repoPath, weight: 1 };
   }
 
+  // A title for a new tab: the profile label, suffixed " (n)" when it repeats.
+  function titleFor(profile: ShellProfile | undefined, existing: Tab[]): string {
+    const label = profile?.label ?? "Terminal";
+    const same = existing.filter((x) => x.title.replace(/ \(\d+\)$/, "") === label).length;
+    return same === 0 ? label : `${label} (${same + 1})`;
+  }
+
+  // Open a new tab (its own group with a single pane).
   function addTab(shellId?: string) {
     const id = shellId ?? defaultShell;
     const profile = shells.find((s) => s.id === id) ?? shells[0];
-    // Build the tab (and its id) once, outside the updater, so StrictMode's double-invoked
+    // Build the tab (and its ids) once, outside the updater, so StrictMode's double-invoked
     // updater can't generate two ids / desync the active tab.
-    const tab = makeTab(profile, tabs);
+    const pane = newPane(profile);
+    const tab: Tab = { id: newId(), title: titleFor(profile, tabs), panes: [pane] };
     setTabs((prev) => [...prev, tab]);
-    setActiveId(tab.id);
+    setActiveTabId(tab.id);
+    setFocusedPaneId(pane.id);
     setMenuOpen(false);
   }
 
-  function closeTab(id: string) {
-    const idx = tabs.findIndex((x) => x.id === id);
-    const next = tabs.filter((x) => x.id !== id);
+  // Split the active tab: add a pane beside the others (mirrors the focused pane's profile).
+  function splitActive() {
+    const tab = tabs.find((x) => x.id === activeTabId);
+    if (!tab) return;
+    const focused = tab.panes.find((p) => p.id === focusedPaneId) ?? tab.panes[0];
+    const profile =
+      shells.find((s) => s.id === focused?.shellId) ??
+      shells.find((s) => s.id === defaultShell) ??
+      shells[0];
+    const pane = newPane(profile);
+    setTabs((prev) =>
+      prev.map((x) => (x.id === tab.id ? { ...x, panes: [...x.panes, pane] } : x))
+    );
+    setFocusedPaneId(pane.id);
+  }
+
+  function selectTab(tabId: string) {
+    const tab = tabs.find((x) => x.id === tabId);
+    if (!tab) return;
+    setActiveTabId(tabId);
+    // Focus the focused pane if it's in this tab, otherwise the first pane.
+    if (!tab.panes.some((p) => p.id === focusedPaneId)) setFocusedPaneId(tab.panes[0].id);
+  }
+
+  // Close a whole tab (and all its panes). Closing the last tab tears the dock down.
+  function closeTab(tabId: string) {
+    const idx = tabs.findIndex((x) => x.id === tabId);
+    const next = tabs.filter((x) => x.id !== tabId);
     if (next.length === 0) {
-      onClosed(); // no sessions left to preserve — tear the dock down
+      onClosed();
       return;
     }
     setTabs(next);
-    if (activeId === id) {
-      setActiveId(next[Math.min(idx, next.length - 1)].id);
+    if (activeTabId === tabId) {
+      const na = next[Math.min(idx, next.length - 1)];
+      setActiveTabId(na.id);
+      setFocusedPaneId(na.panes[0].id);
     }
+  }
+
+  // Close a single pane within a group. If it was the group's last pane the tab goes too;
+  // if that was the last tab the dock tears down.
+  function closePane(paneId: string) {
+    const owner = tabs.find((x) => x.panes.some((p) => p.id === paneId));
+    if (!owner) return;
+    if (owner.panes.length === 1) {
+      closeTab(owner.id);
+      return;
+    }
+    const removedIdx = owner.panes.findIndex((p) => p.id === paneId);
+    const next = tabs.map((x) =>
+      x.id === owner.id ? { ...x, panes: x.panes.filter((p) => p.id !== paneId) } : x
+    );
+    setTabs(next);
+    if (focusedPaneId === paneId) {
+      // Move focus to the closed pane's neighbor (the pane now at its index, else the last).
+      const t2 = next.find((x) => x.id === owner.id);
+      if (t2) setFocusedPaneId(t2.panes[Math.min(removedIdx, t2.panes.length - 1)].id);
+    }
+  }
+
+  // Drag a separator between panes `idx-1` and `idx` of `tabId`, shifting flex weight between
+  // them proportionally to the pointer delta over the group's width.
+  function startSplitResize(tabId: string, idx: number, e: ReactMouseEvent) {
+    e.preventDefault();
+    const container = (e.currentTarget as HTMLElement).parentElement;
+    if (!container) return;
+    const width = container.getBoundingClientRect().width || 1;
+    const startX = e.clientX;
+    const tab = tabs.find((x) => x.id === tabId);
+    if (!tab) return;
+    const start = tab.panes.map((p) => p.weight);
+    const total = start.reduce((a, b) => a + b, 0);
+    const li = idx - 1;
+    const ri = idx;
+    const pair = start[li] + start[ri];
+    const min = total * MIN_WEIGHT_FRACTION;
+    const onMove = (ev: MouseEvent) => {
+      const dW = ((ev.clientX - startX) / width) * total;
+      const newL = Math.max(min, Math.min(pair - min, start[li] + dW));
+      const newR = pair - newL;
+      setTabs((prev) =>
+        prev.map((x) => {
+          if (x.id !== tabId) return x;
+          const panes = x.panes.map((p, i) =>
+            i === li ? { ...p, weight: newL } : i === ri ? { ...p, weight: newR } : p
+          );
+          return { ...x, panes };
+        })
+      );
+    };
+    const onUp = () => {
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+      document.body.style.userSelect = "";
+    };
+    document.body.style.userSelect = "none";
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
   }
 
   // Detect the available shells once, then open the first tab with the configured default.
   // The `alive` guard makes this idempotent under StrictMode's double-mount (only the
-  // surviving run sets state), so exactly one initial tab is created.
+  // surviving run sets state), so exactly one initial tab/pane is created.
   useEffect(() => {
     let alive = true;
     const openFirst = (list: ShellProfile[]) => {
       if (!alive) return;
       setShells(list);
       const def = list.find((s) => s.id === defaultShell) ?? list[0];
-      const tab = makeTab(def, []);
+      const pane = newPane(def);
+      const tab: Tab = { id: newId(), title: titleFor(def, []), panes: [pane] };
       setTabs([tab]);
-      setActiveId(tab.id);
+      setActiveTabId(tab.id);
+      setFocusedPaneId(pane.id);
     };
     api.listShells().then(openFirst).catch(() => openFirst([]));
     return () => {
@@ -322,16 +415,16 @@ export function IntegratedTerminalDock({
         onMouseDown={startResize}
         className="h-1 shrink-0 cursor-row-resize bg-neutral-800 transition-colors hover:bg-indigo-600"
       />
-      {/* Tab strip + new-tab split button. */}
+      {/* Tab strip + split / new-tab buttons. */}
       <div className="flex h-9 shrink-0 items-center gap-1 px-2 text-xs text-neutral-300">
         <TerminalIcon className="ml-1 mr-0.5 h-3.5 w-3.5 shrink-0 text-indigo-400" />
         <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
           {tabs.map((tab) => {
-            const isActive = tab.id === activeId;
+            const isActive = tab.id === activeTabId;
             return (
               <div
                 key={tab.id}
-                onClick={() => setActiveId(tab.id)}
+                onClick={() => selectTab(tab.id)}
                 title={tab.title}
                 className={`group flex shrink-0 cursor-pointer items-center gap-1.5 rounded-md py-1 pl-2 pr-1 ${
                   isActive
@@ -341,6 +434,11 @@ export function IntegratedTerminalDock({
               >
                 <TerminalIcon className="h-3 w-3 shrink-0 opacity-70" />
                 <span className="max-w-[11rem] truncate">{tab.title}</span>
+                {tab.panes.length > 1 && (
+                  <span className="rounded bg-neutral-700/70 px-1 text-[9px] font-medium text-neutral-300">
+                    {tab.panes.length}
+                  </span>
+                )}
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -355,6 +453,14 @@ export function IntegratedTerminalDock({
             );
           })}
         </div>
+
+        <button
+          onClick={splitActive}
+          title={t("integratedTerminal.split")}
+          className="shrink-0 rounded p-1 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100"
+        >
+          <SplitSquareHorizontal className="h-3.5 w-3.5" />
+        </button>
 
         <div className="relative shrink-0">
           <div className="flex items-center">
@@ -415,17 +521,58 @@ export function IntegratedTerminalDock({
         </button>
       </div>
 
-      {/* Panes: all tabs stay mounted; inactive ones are hidden to preserve their session. */}
+      {/* Groups stacked; only the active one is shown, its panes laid out side by side.
+          Every pane stays mounted so all sessions persist. */}
       <div className="relative min-h-0 flex-1 overflow-hidden">
-        {tabs.map((tab) => (
-          <TerminalPane
-            key={tab.id}
-            tab={tab}
-            active={tab.id === activeId}
-            dockVisible={visible}
-            palette={palette}
-          />
-        ))}
+        {tabs.map((tab) => {
+          const groupActive = tab.id === activeTabId;
+          const split = tab.panes.length > 1;
+          return (
+            <div
+              key={tab.id}
+              className={`absolute inset-0 flex ${groupActive ? "" : "hidden"}`}
+            >
+              {tab.panes.map((pane, i) => (
+                <Fragment key={pane.id}>
+                  {i > 0 && (
+                    <div
+                      onMouseDown={(e) => startSplitResize(tab.id, i, e)}
+                      className="w-1 shrink-0 cursor-col-resize bg-neutral-800 transition-colors hover:bg-indigo-600"
+                    />
+                  )}
+                  <div
+                    onFocus={() => setFocusedPaneId(pane.id)}
+                    onMouseDown={() => setFocusedPaneId(pane.id)}
+                    style={{ flexGrow: pane.weight, flexBasis: 0 }}
+                    className="group relative min-w-0 shrink"
+                  >
+                    <TerminalPane
+                      pane={pane}
+                      visible={groupActive && visible}
+                      focused={pane.id === focusedPaneId}
+                      palette={palette}
+                    />
+                    {split && pane.id === focusedPaneId && (
+                      <div className="pointer-events-none absolute inset-0 ring-1 ring-inset ring-indigo-500/40" />
+                    )}
+                    {split && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          closePane(pane.id);
+                        }}
+                        title={t("common.close")}
+                        className="absolute right-1.5 top-1.5 z-10 rounded p-0.5 text-neutral-500 opacity-0 hover:bg-neutral-800 hover:text-neutral-200 focus:opacity-100 group-hover:opacity-100"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </Fragment>
+              ))}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

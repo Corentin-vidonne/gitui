@@ -986,6 +986,7 @@
   },
   "integratedTerminal": {
     "newTab": "Nouveau terminal",
+    "split": "Diviser le terminal",
     "chooseShell": "Choisir un profil",
     "sessionEnded": "processus terminé",
     "noShells": "Aucun shell détecté",
