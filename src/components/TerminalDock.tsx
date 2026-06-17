@@ -7,6 +7,7 @@ import { listen } from "@tauri-apps/api/event";
 import { Sparkles, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { errorText } from "../lib/api";
+import { attachClipboard } from "../lib/termClipboard";
 import { useThemePalette } from "../lib/theme";
 
 export type AnalyzeTarget =
@@ -90,6 +91,7 @@ export function TerminalDock({
     const fit = new FitAddon();
     term.loadAddon(fit);
     if (hostRef.current) term.open(hostRef.current);
+    attachClipboard(term); // copy (on selection) / paste keybindings
 
     const safeFit = () => {
       try {

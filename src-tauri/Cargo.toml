@@ -42,4 +42,7 @@ url = "2"
 # macOS dev/CI builds toolchain-free. `zip` (kept from the defaults) extracts update archives.
 tauri-plugin-updater = { version = "2.10.1", default-features = false, features = ["native-tls", "zip"] }
 tauri-plugin-process = "2.3.1"
+# Native clipboard access for the integrated terminal (copy/paste). The Rust-backed plugin
+# works uniformly across Windows/macOS/Linux webviews, unlike `navigator.clipboard.readText`.
+tauri-plugin-clipboard-manager = "2"
 

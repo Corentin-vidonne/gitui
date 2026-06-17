@@ -20,6 +20,7 @@ import {
 import { useTranslation } from "react-i18next";
 import i18n from "../lib/i18n";
 import { api, errorText } from "../lib/api";
+import { attachClipboard } from "../lib/termClipboard";
 import { useThemePalette, type ThemePalette } from "../lib/theme";
 import type { ShellProfile } from "../lib/types";
 
@@ -102,6 +103,7 @@ function TerminalPane({
     fitRef.current = fit;
     term.loadAddon(fit);
     if (hostRef.current) term.open(hostRef.current);
+    attachClipboard(term); // Ctrl/⌘+C (copy on selection) / Ctrl/⌘+V / Shift+Insert, etc.
 
     const safeFit = () => {
       try {
