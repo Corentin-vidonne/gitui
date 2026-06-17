@@ -76,6 +76,14 @@ export type Health = {
   ghAccount: string | null;
 };
 
+/** A launchable shell profile for the integrated terminal (mirrors Rust `ShellProfile`). */
+export type ShellProfile = {
+  id: string;
+  label: string;
+  path: string;
+  args: string[];
+};
+
 export type BranchActionKind =
   | "new-child"
   | "set-parent"

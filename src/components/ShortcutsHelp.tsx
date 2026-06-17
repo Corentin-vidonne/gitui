@@ -3,6 +3,7 @@ import { Modal } from "./Modal";
 
 const SHORTCUTS = (t: (key: string) => string): [string, string][] => [
   ["Ctrl / ⌘ + K", t("shortcutsHelp.commandPalette")],
+  ["Ctrl / ⌘ + `", t("shortcutsHelp.terminal")],
   ["?", t("shortcutsHelp.showHelp")],
   ["1 – 6", t("shortcutsHelp.views")],
   ["s", "Sync"],

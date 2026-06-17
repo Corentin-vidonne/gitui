@@ -63,6 +63,7 @@
       "newBranch": "New branch",
       "stashes": "Stashes",
       "commandLog": "Command log",
+      "terminal": "Terminal",
       "askAi": "Ask {{name}}",
       "settings": "Settings",
       "shortcuts": "Keyboard shortcuts",
@@ -171,6 +172,7 @@
       "submitUnavailable": "Sign in with gh and add a GitHub remote to submit",
       "askAiRepo": "Ask {{name}} (chat about the repo)",
       "commandLogTitle": "Command log: see the git/gh commands the app runs",
+      "terminalTitle": "Integrated terminal (Ctrl+`)",
       "openInVscode": "Open repository in VS Code",
       "noRepoSelected": "No repository selected"
     },
@@ -881,6 +883,9 @@
       "appearanceHint": "Applies immediately. The classic theme stays available at any time.",
       "pollInterval": "Polling interval (seconds)",
       "pollIntervalHint": "How often gitui checks for commits, PRs and issues. Minimum 30s.",
+      "terminal": "Integrated terminal",
+      "terminalDefault": "System default",
+      "terminalHint": "Default shell for new integrated-terminal tabs.",
       "notifications": "Desktop notifications for new activity"
     },
     "ai": {
@@ -929,6 +934,7 @@
   "shortcutsHelp": {
     "title": "Keyboard shortcuts",
     "commandPalette": "Command palette",
+    "terminal": "Toggle terminal",
     "showHelp": "Show this help",
     "views": "View: graph · commits · tree · PRs · issues · docs",
     "newBranch": "New branch",
@@ -977,6 +983,13 @@
       "updated": "{{count}} updated",
       "submitted": "submitted"
     }
+  },
+  "integratedTerminal": {
+    "newTab": "New terminal",
+    "chooseShell": "Choose a profile",
+    "sessionEnded": "process exited",
+    "noShells": "No shell detected",
+    "default": "Default"
   },
   "terminalDock": {
     "sessionEnded": "session ended",

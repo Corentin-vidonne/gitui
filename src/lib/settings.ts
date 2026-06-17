@@ -23,6 +23,8 @@ export type Settings = {
   ollamaModel: string;
   /** Model for Anthropic mode (alias "sonnet"/"opus"/"haiku" or full name); "" = default. */
   anthropicModel: string;
+  /** Default shell profile id for new integrated-terminal tabs; "" = system default. */
+  terminalShell: string;
 };
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -34,6 +36,7 @@ export const DEFAULT_SETTINGS: Settings = {
   ollamaHost: "http://localhost:11434",
   ollamaModel: "",
   anthropicModel: "",
+  terminalShell: "",
 };
 
 /** Display name of the active AI engine: the Ollama model when on Ollama, else "Claude".
@@ -85,6 +88,10 @@ export function loadSettings(): Settings {
         typeof p.anthropicModel === "string"
           ? p.anthropicModel
           : DEFAULT_SETTINGS.anthropicModel,
+      terminalShell:
+        typeof p.terminalShell === "string"
+          ? p.terminalShell
+          : DEFAULT_SETTINGS.terminalShell,
     };
   } catch {
     return { ...DEFAULT_SETTINGS };

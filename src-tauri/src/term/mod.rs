@@ -1,7 +1,9 @@
+mod shells;
+
 use crate::error::{AppError, Result};
 use crate::{assist, git};
 use base64::Engine as _;
-use portable_pty::{native_pty_system, MasterPty, PtySize};
+use portable_pty::{native_pty_system, CommandBuilder, MasterPty, PtySize};
 use serde::Serialize;
 use std::collections::HashMap;
 use std::io::{Read, Write};
@@ -35,14 +37,14 @@ fn pty_size(cols: u16, rows: u16) -> PtySize {
     }
 }
 
-/// Open a PTY running `claude` (pre-seeded with `prompt`) in `repo`, streaming output
-/// to the frontend under session `id`. Shared by the commit and PR analysis commands.
-fn spawn_claude_session(
+/// Spawn `cmd` in a fresh PTY under session `id`, streaming its output to the frontend
+/// (`term-output` events) and signalling termination (`term-exit`). The plumbing shared by
+/// every embedded terminal — the `claude` aides and the plain integrated-shell sessions.
+fn spawn_pty_session(
     app: &AppHandle,
     state: &State<'_, Terminals>,
     id: String,
-    repo: &Path,
-    prompt: &str,
+    cmd: CommandBuilder,
     cols: u16,
     rows: u16,
 ) -> Result<()> {
@@ -50,7 +52,6 @@ fn spawn_claude_session(
         .openpty(pty_size(cols, rows))
         .map_err(|e| AppError::new(e.to_string()))?;
 
-    let cmd = assist::pty_command(repo, prompt)?;
     let child = pair
         .slave
         .spawn_command(cmd)
@@ -97,6 +98,58 @@ fn spawn_claude_session(
         },
     );
     Ok(())
+}
+
+/// Open a PTY running `claude` (pre-seeded with `prompt`) in `repo`, streaming output
+/// to the frontend under session `id`. Shared by the commit and PR analysis commands.
+fn spawn_claude_session(
+    app: &AppHandle,
+    state: &State<'_, Terminals>,
+    id: String,
+    repo: &Path,
+    prompt: &str,
+    cols: u16,
+    rows: u16,
+) -> Result<()> {
+    let cmd = assist::pty_command(repo, prompt)?;
+    spawn_pty_session(app, state, id, cmd, cols, rows)
+}
+
+/// List the shell profiles available on this machine (à la VS Code terminal profiles),
+/// for the integrated terminal's profile picker. Best-first; the platform default leads.
+#[tauri::command]
+pub fn list_shells() -> Vec<shells::ShellProfile> {
+    shells::available()
+}
+
+/// Open a plain interactive shell session in `cwd` (the integrated terminal). `shell` is a
+/// profile id from [`list_shells`]; `None`/empty uses the platform default. Reuses the same
+/// `term_write` / `term_resize` / `term_close` lifecycle as the AI terminals.
+#[tauri::command]
+pub fn term_open_shell(
+    app: AppHandle,
+    state: State<'_, Terminals>,
+    id: String,
+    cwd: Option<String>,
+    shell: Option<String>,
+    cols: u16,
+    rows: u16,
+) -> Result<()> {
+    let profile = shells::resolve(shell.as_deref())
+        .ok_or_else(|| AppError::new("No shell found on this system"))?;
+    let mut cmd = CommandBuilder::new(&profile.path);
+    for a in &profile.args {
+        cmd.arg(a);
+    }
+    // Help line-editors/programs render correctly; the rest of the env is inherited.
+    cmd.env("TERM", "xterm-256color");
+    if let Some(dir) = cwd.as_deref() {
+        let p = Path::new(dir);
+        if p.is_dir() {
+            cmd.cwd(p);
+        }
+    }
+    spawn_pty_session(&app, &state, id, cmd, cols, rows)
 }
 
 #[tauri::command]

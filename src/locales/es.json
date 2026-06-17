@@ -63,6 +63,7 @@
       "newBranch": "Nueva branch",
       "stashes": "Stashes",
       "commandLog": "Registro de comandos",
+      "terminal": "Terminal",
       "askAi": "Preguntar a {{name}}",
       "settings": "Ajustes",
       "shortcuts": "Atajos de teclado",
@@ -171,6 +172,7 @@
       "submitUnavailable": "Inicia sesión con gh y añade un remote de GitHub para submit",
       "askAiRepo": "Preguntar a {{name}} (conversar sobre el repositorio)",
       "commandLogTitle": "Registro de comandos: ver los comandos git/gh que ejecuta la app",
+      "terminalTitle": "Terminal integrada (Ctrl+`)",
       "openInVscode": "Abrir el repositorio en VS Code",
       "noRepoSelected": "Ningún repositorio seleccionado"
     },
@@ -881,6 +883,9 @@
       "appearanceHint": "Se aplica de inmediato. El tema clásico sigue disponible en todo momento.",
       "pollInterval": "Intervalo de sondeo (segundos)",
       "pollIntervalHint": "Con qué frecuencia gitui busca commits, PRs e issues. Mínimo 30s.",
+      "terminal": "Terminal integrada",
+      "terminalDefault": "Predeterminado del sistema",
+      "terminalHint": "Shell predeterminado para las nuevas pestañas de la terminal integrada.",
       "notifications": "Notificaciones de escritorio para la nueva actividad"
     },
     "ai": {
@@ -929,6 +934,7 @@
   "shortcutsHelp": {
     "title": "Atajos de teclado",
     "commandPalette": "Paleta de comandos",
+    "terminal": "Mostrar/ocultar la terminal",
     "showHelp": "Mostrar esta ayuda",
     "views": "Vista: grafo · commits · tree · PRs · issues · docs",
     "newBranch": "Nueva rama",
@@ -977,6 +983,13 @@
       "updated": "{{count}} actualizada(s)",
       "submitted": "enviado"
     }
+  },
+  "integratedTerminal": {
+    "newTab": "Nueva terminal",
+    "chooseShell": "Elegir un perfil",
+    "sessionEnded": "proceso finalizado",
+    "noShells": "Ningún shell detectado",
+    "default": "Predeterminado"
   },
   "terminalDock": {
     "sessionEnded": "sesión finalizada",

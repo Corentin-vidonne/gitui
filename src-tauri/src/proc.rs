@@ -173,9 +173,79 @@ where
     })
 }
 
+/// Locate an executable named `program` by scanning `PATH`. On Windows the common
+/// executable extensions are tried (`.exe`, `.cmd`, …). Returns the first match, or `None`.
+/// Pure path lookup — no subprocess — so it's cheap to call repeatedly during detection.
+pub fn which(program: &str) -> Option<std::path::PathBuf> {
+    let path = std::env::var_os("PATH")?;
+    let dirs: Vec<std::path::PathBuf> = std::env::split_paths(&path).collect();
+    which_in(program, &dirs)
+}
+
+/// PATH-scan core, split out so it can be unit-tested without touching the real `PATH`.
+fn which_in(program: &str, dirs: &[std::path::PathBuf]) -> Option<std::path::PathBuf> {
+    // Windows executables always carry an extension (no bare-name match, which would pick up
+    // an unrelated data file); on unix any name is allowed but the exec bit is required.
+    #[cfg(windows)]
+    let exts: &[&str] = &[".exe", ".cmd", ".bat", ".com"];
+    #[cfg(not(windows))]
+    let exts: &[&str] = &[""];
+    for dir in dirs {
+        for ext in exts {
+            let cand = dir.join(format!("{program}{ext}"));
+            if is_executable_file(&cand) {
+                return Some(cand);
+            }
+        }
+    }
+    None
+}
+
+/// Whether `p` is a regular file that can actually be executed.
+#[cfg(windows)]
+fn is_executable_file(p: &std::path::Path) -> bool {
+    // Extension already constrained to an executable type by the caller.
+    p.is_file()
+}
+
+#[cfg(not(windows))]
+fn is_executable_file(p: &std::path::Path) -> bool {
+    use std::os::unix::fs::PermissionsExt;
+    std::fs::metadata(p)
+        .map(|m| m.is_file() && m.permissions().mode() & 0o111 != 0)
+        .unwrap_or(false)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn which_in_finds_a_file_in_the_first_matching_dir() {
+        let tmp = std::env::temp_dir();
+        // A file that certainly exists somewhere on disk; reuse the OS temp dir itself by
+        // probing for any regular file. To stay deterministic we create a marker file.
+        let dir = tmp.join("gitui-which-test");
+        let _ = std::fs::create_dir_all(&dir);
+        let name = "gitui-which-marker";
+        #[cfg(windows)]
+        let file = dir.join(format!("{name}.exe"));
+        #[cfg(not(windows))]
+        let file = dir.join(name);
+        std::fs::write(&file, b"x").unwrap();
+        // `which_in` requires the exec bit on unix; make the marker executable so it matches.
+        #[cfg(not(windows))]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&file, std::fs::Permissions::from_mode(0o755)).unwrap();
+        }
+
+        let found = which_in(name, &[std::path::PathBuf::from("/nonexistent-xyz"), dir.clone()]);
+        assert_eq!(found.as_deref(), Some(file.as_path()));
+        // A name with no matching file returns None.
+        assert!(which_in("gitui-which-absent", &[dir]).is_none());
+        let _ = std::fs::remove_file(&file);
+    }
 
     #[test]
     fn merge_path_dirs_appends_missing_without_duplicates() {

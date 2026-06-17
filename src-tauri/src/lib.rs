@@ -114,6 +114,8 @@ pub fn run() {
             term::term_open_analyze_pr,
             term::term_open_merge_assist,
             term::term_open_merge_branches,
+            term::list_shells,
+            term::term_open_shell,
             term::term_write,
             term::term_resize,
             term::term_close,

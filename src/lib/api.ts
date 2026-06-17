@@ -16,6 +16,7 @@ import type {
   PrSummary,
   RepoGraph,
   RepoView,
+  ShellProfile,
   SplitDiffFile,
   StashEntry,
   SubmitStepInfo,
@@ -32,6 +33,8 @@ export const api = {
     anthropicModel: string
   ) => invoke<void>("set_ai_backend", { backend, ollamaHost, ollamaModel, anthropicModel }),
   ollamaModels: (host: string) => invoke<string[]>("ollama_models", { host }),
+  /** Shell profiles available for the integrated terminal (à la VS Code profiles). */
+  listShells: () => invoke<ShellProfile[]>("list_shells"),
   getRepoView: (path: string) => invoke<RepoView>("get_repo_view", { path }),
   cloneRepo: (url: string, destParent: string) =>
     invoke<RepoView>("clone_repo", { url, destParent }),

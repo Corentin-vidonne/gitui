@@ -31,6 +31,7 @@ import {
   Keyboard,
   AlertTriangle,
   TerminalSquare,
+  Terminal,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { api, errorText } from "./lib/api";
@@ -57,6 +58,7 @@ import { ConflictPanel } from "./components/ConflictPanel";
 import { SubmitDialog } from "./components/SubmitDialog";
 import { RepoGraphView } from "./components/RepoGraphView";
 import { TerminalDock, type AnalyzeTarget } from "./components/TerminalDock";
+import { IntegratedTerminalDock } from "./components/IntegratedTerminalDock";
 import { ChatDock } from "./components/ChatDock";
 import { CommandLogDock } from "./components/CommandLogDock";
 import { PrPage } from "./components/PrPage";
@@ -201,6 +203,11 @@ export default function App() {
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showCmdLog, setShowCmdLog] = useState(false);
+  // The integrated terminal is `mounted` once opened and merely `shown`/hidden afterwards, so
+  // its shell sessions survive repo switches and show-hide toggles (only closing the last tab
+  // unmounts it). `showTerminal` drives visibility; `terminalMounted` keeps it alive.
+  const [showTerminal, setShowTerminal] = useState(false);
+  const [terminalMounted, setTerminalMounted] = useState(false);
   const [showDeps, setShowDeps] = useState(false);
   const [showWelcome, setShowWelcome] = useState(() => !hasSeenWelcome());
   const [guideSteps, setGuideSteps] = useState<GuideStep[] | null>(null);
@@ -458,6 +465,13 @@ export default function App() {
         setShowPalette((s) => !s);
         return;
       }
+      // Ctrl/⌘ + ` toggles the integrated terminal (VS Code-style); hiding keeps it mounted.
+      if ((e.ctrlKey || e.metaKey) && (e.key === "`" || e.code === "Backquote")) {
+        e.preventDefault();
+        setTerminalMounted(true);
+        setShowTerminal((s) => !s);
+        return;
+      }
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       const el = e.target as HTMLElement | null;
       if (
@@ -673,6 +687,16 @@ export default function App() {
         label: t("app.palette.stashes"),
         icon: <Archive className="h-4 w-4" />,
         run: () => setShowStash(true),
+      },
+      {
+        id: "a-terminal",
+        group: t("app.palette.groupActions"),
+        label: t("app.palette.terminal"),
+        icon: <Terminal className="h-4 w-4" />,
+        run: () => {
+          setTerminalMounted(true);
+          setShowTerminal(true);
+        },
       },
       {
         id: "a-cmdlog",
@@ -1128,6 +1152,20 @@ export default function App() {
                 </button>
                 {isModern && <div className="mx-0.5 h-5 w-px bg-neutral-800" />}
                 <button
+                  onClick={() => {
+                    setTerminalMounted(true);
+                    setShowTerminal((v) => !v);
+                  }}
+                  title={t("app.header.terminalTitle")}
+                  className={
+                    showTerminal
+                      ? "rounded bg-indigo-950/40 p-1.5 text-indigo-300"
+                      : "rounded p-1.5 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100"
+                  }
+                >
+                  <Terminal className="h-4 w-4" />
+                </button>
+                <button
                   onClick={() => setShowCmdLog((v) => !v)}
                   title={t("app.header.commandLogTitle")}
                   className={
@@ -1411,6 +1449,19 @@ export default function App() {
               onClose={() => setTerminal(null)}
             />
           ))}
+
+        {terminalMounted && (
+          <IntegratedTerminalDock
+            visible={showTerminal}
+            repoPath={selected}
+            defaultShell={settings.terminalShell}
+            onHide={() => setShowTerminal(false)}
+            onClosed={() => {
+              setShowTerminal(false);
+              setTerminalMounted(false);
+            }}
+          />
+        )}
 
         {showCmdLog && <CommandLogDock onClose={() => setShowCmdLog(false)} />}
       </main>
